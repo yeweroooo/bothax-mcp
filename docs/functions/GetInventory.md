@@ -1,14 +1,9 @@
 # GetInventory() -> Inventory[]
 
-Ringkasan
-- `GetInventory() -> Inventory[]`
-- Mengambil daftar item di inventaris pemain.
-
-Penjelasan
-- Cocok untuk mengecek kepemilikan item tertentu atau membuat statistik inventaris.
+Mengambil daftar item di inventaris pemain. Cocok untuk mengecek kepemilikan item tertentu atau membuat statistik inventaris.
 
 Nilai kembali
-- Array `Inventory` — setiap entri berisi `id`, `amount`, `flags`.
+- Array `Inventory`: setiap entri berisi `id`, `amount`, `flags`.
 
 Contoh (Lua)
 ```lua

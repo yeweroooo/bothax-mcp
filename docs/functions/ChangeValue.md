@@ -1,15 +1,10 @@
 # ChangeValue(name: string, value: any)
 
-Ringkasan
-- `ChangeValue(name: string, value: any)`
-- Mengubah/menyalakan/mematikan fitur berdasarkan nama.
-
-Penjelasan
-- Nama fitur mengikuti menu/fitur internal executor. Nilai bisa boolean, angka, atau warna hex (mis. `0xFFFFFFFF`). Jika nama tidak dikenal, tidak ada perubahan yang terjadi.
+Mengubah/menyalakan/mematikan fitur berdasarkan nama. Nama fitur mengikuti menu/fitur internal executor. Nilai bisa boolean, angka, atau warna hex (mis. `0xFFFFFFFF`). Jika nama tidak dikenal, tidak ada perubahan yang terjadi.
 
 Parameter
-- `name: string` — Nama fitur/setting.
-- `value: any` — Nilai baru (boolean/number/string/hex).
+- `name: string`: Nama fitur/setting.
+- `value: any`: Nilai baru (boolean/number/string/hex).
 
 Nilai kembali
 - Tidak ada.

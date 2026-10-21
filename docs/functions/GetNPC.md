@@ -1,14 +1,9 @@
 # GetNPC(id: int) -> ClientNPC | nil
 
-Ringkasan
-- `GetNPC(id: int) -> ClientNPC | nil`
-- Mengambil NPC tertentu berdasarkan ID.
-
-Penjelasan
-- Kembalikan `nil` jika ID tidak valid atau NPC tidak ada di world saat ini.
+Mengambil NPC tertentu berdasarkan ID. Kembalikan `nil` jika ID tidak valid atau NPC tidak ada di world saat ini.
 
 Parameter
-- `id: int` — ID NPC.
+- `id: int`: ID NPC.
 
 Nilai kembali
 - `ClientNPC` jika ditemukan, jika tidak maka `nil`.

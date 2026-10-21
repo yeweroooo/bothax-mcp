@@ -1,11 +1,6 @@
 # GetPlayerItems() -> PlayerItems
 
-Ringkasan
-- `GetPlayerItems() -> PlayerItems`
-- Alias dari `GetPlayerInfo()`.
-
-Penjelasan
-- Berisi `gems` dan informasi ransel. Sama dengan `GetPlayerInfo()`.
+Alias dari `GetPlayerInfo()`. Berisi `gems` dan informasi ransel. Sama dengan `GetPlayerInfo()`.
 
 Nilai kembali
 - `PlayerItems`

@@ -1,11 +1,6 @@
 # GetWorld() -> World
 
-Ringkasan
-- `GetWorld() -> World`
-- Mengambil info world yang sedang dimuat.
-
-Penjelasan
-- Gunakan untuk mengetahui nama world dan ukurannya, misalnya saat menampilkan overlay info.
+Mengambil info world yang sedang dimuat. Gunakan untuk mengetahui nama world dan ukurannya, misalnya saat menampilkan overlay info.
 
 Nilai kembali
 - `World`

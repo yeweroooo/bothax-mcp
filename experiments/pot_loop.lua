@@ -1,3 +1,5 @@
+-- Loop place + break pertama, tanpa self-heal.
+-- Hasil: macet saat tile sudah terisi, 121 siklus terlewat tanpa aksi.
 local ITEM = 16706
 local TX, TY = 72, 24
 local function inv(id)

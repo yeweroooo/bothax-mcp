@@ -1,14 +1,9 @@
 # LoadEncryptedFile(filename: string)
 
-Ringkasan
-- `LoadEncryptedFile(filename: string)`
-- Menjalankan file terenkripsi dari folder script.
-
-Penjelasan
-- Pasangan dari `EncryptFile`. Pastikan nama file benar dan telah terenkripsi.
+Menjalankan file terenkripsi dari folder script. Pasangan dari `EncryptFile`. Pastikan nama file benar dan telah terenkripsi.
 
 Parameter
-- `filename: string` — Nama file terenkripsi.
+- `filename: string`: Nama file terenkripsi.
 
 Nilai kembali
 - Tidak ada.

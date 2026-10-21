@@ -1,11 +1,6 @@
 # GetLocal() -> NetAvatar
 
-Ringkasan
-- `GetLocal() -> NetAvatar`
-- Mengambil avatar pemain lokal.
-
-Penjelasan
-- Cara cepat mengetahui posisi/nama Anda sendiri di world.
+Mengambil avatar pemain lokal. Cara cepat mengetahui posisi/nama Anda sendiri di world.
 
 Nilai kembali
 - `NetAvatar`

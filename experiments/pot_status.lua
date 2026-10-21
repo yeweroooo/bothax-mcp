@@ -1,3 +1,4 @@
+-- Pembaca status: gems, jumlah objek di world, isi tile target.
 local ok, pi = pcall(GetPlayerInfo)
 local gems = (ok and type(pi) == 'table') and tostring(pi.gems) or '?'
 local nobj = 0

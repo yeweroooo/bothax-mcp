@@ -1,3 +1,5 @@
+-- Loop place + break dengan self-heal di dalam RunThread.
+-- Hasil: 245 Pot O' Gems habis, gems 3.867 jadi 13.901, avatar tidak bergeser.
 local ITEM = 16706
 local TX, TY = 72, 24
 local function inv(id)

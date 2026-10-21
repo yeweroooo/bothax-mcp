@@ -1,3 +1,5 @@
+-- Probe nama fitur lewat GetValue (nama tak dikenal mengembalikan nil).
+-- Hasil: '[A] Auto collect' dan '[A] Farm: Break delay' ada di build ini.
 local kandidat = {
   '[A] Farm: Break delay',
   '[A] Auto collect', '[A] Farm: Auto collect', '[A] Farm: Collect', '[A] Collect',

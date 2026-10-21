@@ -1,14 +1,9 @@
 # GetPlayer(netid: int) -> NetAvatar | nil
 
-Ringkasan
-- `GetPlayer(netid: int) -> NetAvatar | nil`
-- Mengambil info pemain lain berdasarkan netid.
-
-Penjelasan
-- Mengembalikan `nil` bila netid tidak ditemukan (tidak terload/di luar jarak).
+Mengambil info pemain lain berdasarkan netid. Mengembalikan `nil` bila netid tidak ditemukan (tidak terload/di luar jarak).
 
 Parameter
-- `netid: int` — Net ID pemain.
+- `netid: int`: Net ID pemain.
 
 Nilai kembali
 - `NetAvatar` jika ditemukan, `nil` jika tidak.

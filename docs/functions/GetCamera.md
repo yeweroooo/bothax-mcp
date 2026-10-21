@@ -1,14 +1,9 @@
 # GetCamera() -> WorldCamera
 
-Ringkasan
-- `GetCamera() -> WorldCamera`
-- Mengambil informasi kamera world.
-
-Penjelasan
-- Bantu perhitungan posisi layar untuk menggambar overlay, teks, atau indikator arah.
+Mengambil informasi kamera world. Bantu perhitungan posisi layar untuk menggambar overlay, teks, atau indikator arah.
 
 Nilai kembali
-- `WorldCamera` — Posisi, center, scale, dan resolusi.
+- `WorldCamera`: Posisi, center, scale, dan resolusi.
 
 Contoh (Lua)
 ```lua

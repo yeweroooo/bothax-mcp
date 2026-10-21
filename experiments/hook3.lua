@@ -1,3 +1,5 @@
+-- Uji AddHook dari dalam RunThread.
+-- Hasil: label string tetap 0 event, label angka 1 event.
 _PKT3 = {}
 RunThread(function()
   AddHook('OnSendPacketRaw', 'rec3', function(p)

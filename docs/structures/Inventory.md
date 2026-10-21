@@ -1,15 +1,11 @@
 # Inventory (id:int, amount:int, flags:int)
 
-Deskripsi singkat
-- Entri item di inventaris pemain.
-
-Penjelasan
-- Setiap entri mewakili 1 slot: `id` item dan `amount` jumlah item pada slot tersebut.
+Entri item di inventaris pemain. Setiap entri mewakili 1 slot: `id` item dan `amount` jumlah item pada slot tersebut.
 
 Bidang
-- `id: int` — ID item.
-- `amount: int` — Jumlah/quantity.
-- `flags: int` — Flag item pada slot.
+- `id: int`: ID item.
+- `amount: int`: Jumlah/quantity.
+- `flags: int`: Flag item pada slot.
 
 Contoh penggunaan (Lua)
 ```lua

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression suite untuk gt-mcp server-side (tanpa game, tanpa perangkat).
+Regression suite untuk bothax-mcp server-side (tanpa game, tanpa perangkat).
 
 Fokus pada bug yang sudah terbukti dari pembacaan kode:
   1. type_text: escaping shell bocor (karakter &;|$() memutus perintah,
@@ -240,8 +240,8 @@ class CollectLua(unittest.TestCase):
         """Template yang tidak lewat .format() tidak boleh punya `{{}}`.
 
         `{{}}` hanya untuk template ber-.format(); kalau tertinggal di template
-        mentah, Lua membacanya sebagai tabel berisi tabel kosong — `daftar[1]`
-        jadi table dan `table.concat` gagal saat runtime.
+        mentah, Lua membacanya sebagai tabel berisi tabel kosong. Akibatnya
+        `daftar[1]` jadi table dan `table.concat` gagal saat runtime.
         """
         self.assertNotIn("{{", srv._LIST_OBJECTS_LUA)
 

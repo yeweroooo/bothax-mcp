@@ -1,11 +1,6 @@
 # GetPlayerList() -> NetAvatar[]
 
-Ringkasan
-- `GetPlayerList() -> NetAvatar[]`
-- Mengambil daftar pemain lain yang terlihat/terload di world.
-
-Penjelasan
-- Tidak termasuk diri Anda. Gunakan untuk iterasi nama/posisi pemain di sekitar.
+Mengambil daftar pemain lain yang terlihat/terload di world. Tidak termasuk diri Anda. Gunakan untuk iterasi nama/posisi pemain di sekitar.
 
 Nilai kembali
 - Array `NetAvatar`

@@ -1,11 +1,6 @@
 # GetItemInfoList() -> ItemInfo[]
 
-Ringkasan
-- `GetItemInfoList() -> ItemInfo[]`
-- Mengambil seluruh daftar item dari database item.
-
-Penjelasan
-- Daftar bisa sangat besar. Filter dengan kondisi agar lebih efisien.
+Mengambil seluruh daftar item dari database item. Daftar bisa sangat besar. Filter dengan kondisi agar lebih efisien.
 
 Nilai kembali
 - Array `ItemInfo`

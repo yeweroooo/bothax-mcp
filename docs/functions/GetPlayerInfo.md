@@ -1,11 +1,6 @@
 # GetPlayerInfo() -> PlayerItems
 
-Ringkasan
-- `GetPlayerInfo() -> PlayerItems`
-- Mengambil data gem & backpack pemain.
-
-Penjelasan
-- Gunakan bila Anda ingin menampilkan jumlah gems atau memeriksa ukuran ransel saat ini.
+Mengambil data gem & backpack pemain. Gunakan bila Anda ingin menampilkan jumlah gems atau memeriksa ukuran ransel saat ini.
 
 Nilai kembali
 - `PlayerItems`

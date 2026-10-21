@@ -1,11 +1,6 @@
 # GetNPCList() -> ClientNPC[]
 
-Ringkasan
-- `GetNPCList() -> ClientNPC[]`
-- Mengambil daftar semua NPC aktif di world.
-
-Penjelasan
-- Gunakan untuk scanning posisi NPC, atau mendeteksi keberadaan tipe NPC tertentu.
+Mengambil daftar semua NPC aktif di world. Gunakan untuk scanning posisi NPC, atau mendeteksi keberadaan tipe NPC tertentu.
 
 Nilai kembali
 - Array `ClientNPC`

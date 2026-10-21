@@ -1,6 +1,5 @@
--- probe2.lua — cari nama global API yang benar-benar tersedia.
+-- cari nama global API yang benar-benar tersedia.
 -- Tidak memakai io, tidak mengandalkan MakeRequest.
-
 local function t(name)
   local ok, v = pcall(function() return _G[name] end)
   return name .. "=" .. (ok and type(v) or "ERR")

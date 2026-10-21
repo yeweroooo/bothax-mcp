@@ -1,13 +1,9 @@
 # TileFlags (value:int, locked:boolean, public:boolean, water:boolean, ...)
 
-Deskripsi singkat
-- Flag/penanda kondisi khusus pada tile.
-
-Penjelasan
-- Representasi kondisi tile dalam bentuk boolean/bitmask. Ubah nilai flag dengan fungsi `SetTileFlags`.
+Flag/penanda kondisi khusus pada tile. Representasi kondisi tile dalam bentuk boolean/bitmask. Ubah nilai flag dengan fungsi `SetTileFlags`.
 
 Bidang
-- `value: int` — Nilai bitmask keseluruhan.
+- `value: int`: Nilai bitmask keseluruhan.
 - `locked: boolean`
 - `spliced: boolean`
 - `dropseed: boolean`

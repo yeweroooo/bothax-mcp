@@ -1,14 +1,9 @@
 # GetClient() -> ENetClient
 
-Ringkasan
-- `GetClient() -> ENetClient`
-- Mendapatkan info koneksi ENet saat ini.
-
-Penjelasan
-- Bantu diagnosa jaringan (alamat server dan ping) saat fitur Anda bergantung pada koneksi stabil.
+Mendapatkan info koneksi ENet saat ini. Bantu diagnosa jaringan (alamat server dan ping) saat fitur Anda bergantung pada koneksi stabil.
 
 Nilai kembali
-- `ENetClient` — address, port, ping.
+- `ENetClient`: address, port, ping.
 
 Contoh (Lua)
 ```lua

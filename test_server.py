@@ -6,12 +6,17 @@ Uji sisi server tanpa game:
 """
 import asyncio
 import json
+import os
 import sys
 import threading
 import time
 import urllib.request
 
-import server as srv
+# Port sendiri: kalau 8770 dipegang server lain, tes masuk mode attached dan
+# hasilnya datang dari game sungguhan, bukan dari klien palsu di bawah.
+os.environ["GT_BRIDGE_PORT"] = "8771"
+
+import server as srv  # noqa: E402  (port harus diset sebelum modul diimpor)
 
 
 def test_bridge_channel():
@@ -55,7 +60,7 @@ async def test_mcp_stdio():
     params = StdioServerParameters(
         command=sys.executable,
         args=[str(__file__).replace("test_server.py", "server.py")],
-        env={"GT_BRIDGE_PORT": "8771", "PATH": "/home/adit/Android/Sdk/platform-tools:/usr/bin:/bin"},
+        env={**os.environ, "GT_BRIDGE_PORT": "8771"},
     )
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
@@ -66,7 +71,7 @@ async def test_mcp_stdio():
             res = await session.call_tool("device_info", {})
             text = res.content[0].text
             if text.startswith("ERROR"):
-                print("  device_info:", text, "(perangkat tidak terhubung — jalur ADB tidak diuji)")
+                print("  device_info:", text, "(perangkat tidak terhubung, jalur ADB tidak diuji)")
             else:
                 data = json.loads(text)
                 print("  device_info:", json.dumps({k: data[k] for k in ("model", "android", "game_running") if k in data}))

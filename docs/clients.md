@@ -1,36 +1,34 @@
-# Memakai gt-mcp dari klien MCP lain
+# Memakai bothax-mcp dari klien MCP lain
 
-Server ini bicara **MCP stdio** biasa, jadi klien apa pun yang mendukung MCP
-lewat stdio bisa memakainya: Claude Code, Codex CLI, opencode, Gemini CLI,
-Cursor, Zed, Cline, Continue, dan lain-lain.
+Server ini bicara MCP stdio biasa, jadi klien apa pun yang mendukung stdio bisa memakainya.
 
-Aturan umum:
+Nilai yang perlu diisi di semua klien:
 
-- command  : `<venv>/bin/python` (Windows: `<venv>\Scripts\python.exe`)
-- args     : `["/path/ke/gt-mcp/server.py"]`
-- env      : `GT_BRIDGE_PORT` (default 8770), `PATH` harus memuat folder `platform-tools`
-- satu server = satu proses; kalau port bridge sudah dipegang proses lain, instance
-  kedua otomatis masuk mode `attached` dan meneruskan perintah lewat `/enqueue`
+- command: `<repo>/.venv/bin/python` (Windows: `<repo>\.venv\Scripts\python.exe`)
+- args: `["<repo>/server.py"]`
+- env: `GT_BRIDGE_PORT` (default 8770), dan `PATH` harus memuat folder `platform-tools`
 
-> Nama kunci config beda-beda antar klien dan bisa berubah antar versi. Kalau
-> potongan di bawah tidak diterima, cek `--help`/dokumentasi klien tersebut;
-> yang penting isinya tetap: command + args + env seperti di atas.
+Satu server menulis ke satu port bridge. Kalau port itu sudah dipegang proses lain,
+instance kedua masuk mode `attached` dan meneruskan perintah lewat `/enqueue`.
+
+Nama kunci config berbeda antar klien dan bisa berubah antar versi. Kalau potongan di
+bawah ditolak, cek `--help` klien tersebut; isinya tetap sama: command, args, env.
 
 ## Claude Code
 
 ```bash
-claude mcp add growtopia \
+claude mcp add bothax \
   -e GT_BRIDGE_PORT=8770 \
-  -- /home/adit/Documents/botex/gt-mcp/.venv/bin/python \
-     /home/adit/Documents/botex/gt-mcp/server.py
+  -- <repo>/.venv/bin/python \
+     <repo>/server.py
 ```
 
 ## Codex CLI (`~/.codex/config.toml`)
 
 ```toml
-[mcp_servers.growtopia]
-command = "/home/adit/Documents/botex/gt-mcp/.venv/bin/python"
-args = ["/home/adit/Documents/botex/gt-mcp/server.py"]
+[mcp_servers.bothax]
+command = "<repo>/.venv/bin/python"
+args = ["<repo>/server.py"]
 env = { GT_BRIDGE_PORT = "8770" }
 ```
 
@@ -40,10 +38,9 @@ env = { GT_BRIDGE_PORT = "8770" }
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "growtopia": {
+    "bothax": {
       "type": "local",
-      "command": ["/home/adit/Documents/botex/gt-mcp/.venv/bin/python",
-                  "/home/adit/Documents/botex/gt-mcp/server.py"],
+      "command": ["<repo>/.venv/bin/python", "<repo>/server.py"],
       "enabled": true,
       "environment": { "GT_BRIDGE_PORT": "8770" }
     }
@@ -56,23 +53,23 @@ env = { GT_BRIDGE_PORT = "8770" }
 ```json
 {
   "mcpServers": {
-    "growtopia": {
-      "command": "/home/adit/Documents/botex/gt-mcp/.venv/bin/python",
-      "args": ["/home/adit/Documents/botex/gt-mcp/server.py"],
+    "bothax": {
+      "command": "<repo>/.venv/bin/python",
+      "args": ["<repo>/server.py"],
       "env": { "GT_BRIDGE_PORT": "8770" }
     }
   }
 }
 ```
 
-## Cursor (`~/.cursor/mcp.json`) / Cline / Continue
+## Cursor (`~/.cursor/mcp.json`), Cline, Continue
 
 ```json
 {
   "mcpServers": {
-    "growtopia": {
-      "command": "/home/adit/Documents/botex/gt-mcp/.venv/bin/python",
-      "args": ["/home/adit/Documents/botex/gt-mcp/server.py"],
+    "bothax": {
+      "command": "<repo>/.venv/bin/python",
+      "args": ["<repo>/server.py"],
       "env": { "GT_BRIDGE_PORT": "8770" }
     }
   }
@@ -84,10 +81,10 @@ env = { GT_BRIDGE_PORT = "8770" }
 ```json
 {
   "context_servers": {
-    "growtopia": {
+    "bothax": {
       "command": {
-        "path": "/home/adit/Documents/botex/gt-mcp/.venv/bin/python",
-        "args": ["/home/adit/Documents/botex/gt-mcp/server.py"],
+        "path": "<repo>/.venv/bin/python",
+        "args": ["<repo>/server.py"],
         "env": { "GT_BRIDGE_PORT": "8770" }
       }
     }
@@ -99,25 +96,24 @@ env = { GT_BRIDGE_PORT = "8770" }
 
 ```yaml
 mcp_servers:
-  growtopia:
-    command: /home/adit/Documents/botex/gt-mcp/.venv/bin/python
+  bothax:
+    command: <repo>/.venv/bin/python
     args:
-      - /home/adit/Documents/botex/gt-mcp/server.py
+      - <repo>/server.py
     env:
-      PATH: /home/adit/Android/Sdk/platform-tools:/usr/bin:/bin
+      PATH: <sdk>/platform-tools:/usr/bin:/bin
     connect_timeout: 30.0
     enabled: true
 ```
 
 ## Catatan lintas klien
 
-- **Tool gambar**: `screenshot`, `screenshot_crop`, `panel_crop` mengembalikan
-  content `image` (PNG base64), bukan teks. Klien yang tidak mendukung content
-  gambar tetap bisa memanggilnya, tapi hanya akan melihat metadata.
-- **Jangan dua server menulis port yang sama tanpa mode attached**: versi ini
-  sudah menangani itu (`GET /status`, `POST /enqueue`), tapi klien yang berbeda
-  tidak berbagi antrean perintah — satu proses jadi pemilik, yang lain menumpang.
-- **Windows**: pastikan `adb.exe` ada di `PATH` atau set `ANDROID_SDK_ROOT`.
-  Semua path sementara memakai `tempfile.gettempdir()`, bukan `/tmp`.
-- **macOS**: `adb` dari `brew install android-platform-tools`, atau set
-  `ANDROID_SDK_ROOT` ke SDK yang dipakai Android Studio.
+- **Tool gambar**: `screenshot`, `screenshot_crop`, dan `panel_crop` mengembalikan content
+  `image` (PNG base64). Klien yang tidak menampilkan content gambar tetap bisa memanggilnya,
+  tapi hanya melihat metadata.
+- **Dua klien, satu port**: keduanya berbagi antrean perintah. Satu proses jadi pemilik,
+  yang lain menumpang.
+- **Windows**: taruh `adb.exe` di `PATH` atau set `ANDROID_SDK_ROOT`. Path sementara memakai
+  `tempfile.gettempdir()`, bukan `/tmp`.
+- **macOS**: `brew install android-platform-tools`, atau set `ANDROID_SDK_ROOT` ke SDK
+  Android Studio.

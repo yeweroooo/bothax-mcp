@@ -1,10 +1,6 @@
 # TileExtra (type:int, label:string, owner:int, color:uint, ...)
 
-Deskripsi singkat
-- Data tambahan sebuah tile (label, owner, warna, progres, dsb.).
-
-Penjelasan
-- `extra` tidak selalu ada. Cek dulu `if t.extra then ... end` sebelum mengakses field-nya.
+Data tambahan sebuah tile (label, owner, warna, progres, dsb.). `extra` tidak selalu ada. Cek dulu `if t.extra then ... end` sebelum mengakses field-nya.
 
 Bidang
 - `type: int`

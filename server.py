@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""
-gt-mcp — MCP server yang mengendalikan Growtopia + panel BINTERNAL.
+"""bothax-mcp: MCP server yang mengendalikan Growtopia + panel BINTERNAL.
 
 Dua jalur kontrol:
   1. ADB   : tap, swipe, screenshot, launch, logcat, push script.
-  2. BRIDGE: perintah Lua dieksekusi di dalam proses game lewat script
-             bridge.lua yang polling HTTP (MakeRequest) ke 127.0.0.1,
-             dihubungkan dengan `adb reverse tcp:PORT tcp:PORT`.
+  2. BRIDGE: perintah Lua dieksekusi di dalam proses game lewat bridge.lua
+             yang polling HTTP (MakeRequest) ke 127.0.0.1, dihubungkan
+             dengan `adb reverse tcp:PORT tcp:PORT`.
 
 Jalankan: python server.py            (stdio, untuk klien MCP)
 """
@@ -31,8 +30,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from mcp.server.mcpserver import Image, MCPServer
-
-# ---------------------------------------------------------------- konfigurasi
 
 def _find_adb() -> str:
     """Cari adb di Linux/macOS/Windows tanpa jalur yang di-hardcode.
@@ -82,7 +79,7 @@ POLL_WAIT = 1.0          # detik long-poll
 ACTIVE_TTL = 20.0        # sid pemegang giliran dianggap mati setelah sunyi ini
 RESULT_TIMEOUT = 12.0     # default tunggu hasil eval
 
-mcp = MCPServer("growtopia-bothax")
+mcp = MCPServer("bothax-mcp")
 
 
 def _safe(fn):
@@ -101,9 +98,6 @@ def _safe(fn):
             return f"ERROR: {type(e).__name__}: {e}"
 
     return wrapper
-
-
-# ------------------------------------------------------------------- adb util
 
 
 def adb(*args: str, timeout: int = 20, check: bool = False) -> subprocess.CompletedProcess:
@@ -207,11 +201,8 @@ def _input_text_command(text: str) -> str:
     return f"input text {_sh_single_quote(_input_text_payload(text))}"
 
 
-# ------------------------------------------------------------ bridge (HTTP)
-
 class _Bridge:
-    """
-    Antrean perintah untuk sisi Lua + tempat hasilnya mendarat.
+    """Antrean perintah untuk sisi Lua + tempat hasilnya mendarat.
 
     Protokol (plain text, tanpa JSON di sisi Lua):
       bridge GET  /poll?sid=<id>  -> "<cmd_id>|<lua code>"  atau "none"
@@ -279,7 +270,7 @@ class _Bridge:
         Instance yang sudah aktif diprioritaskan selama masih mem-poll, supaya
         skrip lama yang masih hidup tidak dicampuri. Tapi giliran itu harus
         kedaluwarsa: tanpa TTL, sid basi (game di-restart / skrip dijalankan
-        ulang) membuat instance baru dijawab 'none' selamanya — poll tampak
+        ulang) membuat instance baru dijawab 'none' selamanya: poll tampak
         jalan, perintah tidak pernah sampai.
         """
         now = time.time()
@@ -322,7 +313,7 @@ class _Bridge:
         """Kirim ulang perintah yang JELAS hilang, bukan yang masih dikerjakan.
 
         Aturan lama (kirim ulang setelah retry_after tanpa hasil) mengeksekusi
-        perintah dua kali setiap kali Lua butuh >6 detik — mis. `Sleep(8000)`
+        perintah dua kali setiap kali Lua butuh >6 detik, mis. `Sleep(8000)`
         atau loop berat. Sekarang perintah hanya dikirim ulang kalau instance
         yang menerimanya sudah digantikan instance lain (/hello dengan sid
         baru, biasanya karena game restart): hanya saat itu perintah benar-benar
@@ -388,7 +379,7 @@ class _Bridge:
 BRIDGE = _Bridge()
 
 # "owner"    : proses ini yang memegang port bridge (perilaku normal)
-# "attached" : port sudah dipegang instance gt-mcp lain (mis. sisa
+# "attached" : port sudah dipegang instance bothax-mcp lain (mis. sisa
 #              `server.py --http-only`), jadi perintah dikirim ke sana lewat
 #              /enqueue. Tanpa ini proses MCP mati total hanya karena port
 #              bentrok, dan seluruh tool ADB ikut hilang.
@@ -397,7 +388,7 @@ BRIDGE_MODE = "owner"
 
 
 def _submit_remote(code: str, timeout: float) -> str:
-    """Kirim perintah ke instance gt-mcp yang memegang port bridge."""
+    """Kirim perintah ke instance bothax-mcp yang memegang port bridge."""
     payload = json.dumps({"code": code, "timeout": timeout}).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{BRIDGE_PORT}/enqueue",
@@ -413,7 +404,7 @@ def _submit_remote(code: str, timeout: float) -> str:
 
 
 def _bridge_alive(timeout: float = 1.5) -> bool:
-    """True kalau port bridge dipegang instance gt-mcp (punya /health -> ok)."""
+    """True kalau port bridge dipegang instance bothax-mcp (punya /health -> ok)."""
     try:
         with urllib.request.urlopen(
             f"http://127.0.0.1:{BRIDGE_PORT}/health", timeout=timeout
@@ -550,19 +541,19 @@ def start_bridge_server() -> int:
     try:
         srv = ThreadingHTTPServer(("127.0.0.1", BRIDGE_PORT), _Handler)
     except OSError as e:
-        # Port sudah dipakai. Kalau pemiliknya instance gt-mcp (punya /health),
+        # Port sudah dipakai. Kalau pemiliknya instance bothax-mcp (punya /health),
         # jangan mati: mode attached supaya tool MCP tetap tersedia.
         if _bridge_alive():
             BRIDGE_MODE = "attached"
             print(
-                f"[gt-mcp] port {BRIDGE_PORT} dipegang instance gt-mcp lain; "
+                f"[bothax-mcp] port {BRIDGE_PORT} dipegang instance bothax-mcp lain; "
                 f"mode attached (perintah Lua diteruskan ke sana)",
                 file=sys.stderr,
                 flush=True,
             )
             return BRIDGE_PORT
         raise RuntimeError(
-            f"port {BRIDGE_PORT} dipakai proses lain yang bukan gt-mcp: {e}. "
+            f"port {BRIDGE_PORT} dipakai proses lain yang bukan bothax-mcp: {e}. "
             f"Cek `ss -ltnp | grep {BRIDGE_PORT}`, atau set GT_BRIDGE_PORT."
         ) from e
     t = threading.Thread(target=srv.serve_forever, daemon=True)
@@ -579,8 +570,6 @@ def start_bridge_server() -> int:
     threading.Thread(target=_reaper, daemon=True).start()
     return BRIDGE_PORT
 
-
-# ----------------------------------------------------------------- tools: adb
 
 @mcp.tool()
 @_safe
@@ -632,8 +621,7 @@ def screenshot(save_to: str = ""):
 @mcp.tool()
 @_safe
 def screenshot_crop(x0: int, y0: int, x1: int, y1: int, save_to: str = ""):
-    """
-    Ambil screenshot lalu potong ke area tertentu dan kembalikan gambarnya.
+    """Ambil screenshot lalu potong ke area tertentu dan kembalikan gambarnya.
     Berguna untuk memperbesar panel mod sehingga widget kecil (checkbox,
     slider, field) terbaca jelas sebelum menentukan koordinat tap.
     Koordinat dalam piksel layar; (0,0) kiri-atas.
@@ -652,8 +640,7 @@ def screenshot_crop(x0: int, y0: int, x1: int, y1: int, save_to: str = ""):
 @mcp.tool()
 @_safe
 def panel_crop(x0: int = 0, y0: int = 0, x1: int = 1100, y1: int = 950):
-    """
-    Potong area panel mod (default kiri-atas) supaya terbaca jelas.
+    """Potong area panel mod (default kiri-atas) supaya terbaca jelas.
     Setara screenshot_crop dengan default yang cocok untuk menu BINTERNAL.
     """
     return screenshot_crop(x0, y0, x1, y1)
@@ -755,8 +742,6 @@ def install_apk(apk_path: str) -> str:
     return text
 
 
-# -------------------------------------------------------------- tools: script
-
 @mcp.tool()
 @_safe
 def push_script(local_path: str, name: str = "") -> str:
@@ -807,8 +792,6 @@ def install_bridge() -> str:
         f"jalankan bridge.lua sekali dari menu executor game"
     )
 
-
-# -------------------------------------------------------------- tools: bridge
 
 @mcp.tool()
 @_safe
@@ -1258,13 +1241,13 @@ return string.format('id=%d jumlah=%d inv_awal=%d inv_akhir=%d objek=%d total_am
 @mcp.tool()
 @_safe
 def drop_item(item_id: int, amount: int = 0) -> str:
-    """Jatuhkan item ke tanah di tile avatar — satu paket, bukan dialog manual.
+    """Jatuhkan item ke tanah di tile avatar, satu paket, bukan dialog manual.
 
     `SendPacket(2, "action|dialog_return\\ndialog_name|drop\\nitem_drop|<id>|\\nitem_count|<n>\\n")`
     dengan pipa penutup setelah id. `amount=0` = seluruh isi stack (**drop all**).
 
     Hasil memuat `objek` (jumlah objek di world sesudahnya) dan `total_amount`
-    (jumlah unit item itu yang benar-benar jadi objek) — satu objek bisa membawa
+    (jumlah unit item itu yang benar-benar jadi objek). Satu objek bisa membawa
     beberapa unit, jadi jangan samakan jumlah barang dengan jumlah objek.
     """
     code = _DROP_LUA.format(item=int(item_id), amount=int(amount)).strip()
@@ -1290,8 +1273,8 @@ def collect_objects(item_id: int = 0, radius: float = 0, delay_ms: int = 60) -> 
 
     Mekanismenya terbukti live: `SendPacketRaw(false, {type=11, state=0,
     value=<oid objek>, px=<pos.x objek>, py=<pos.y objek>, x/y=pos avatar})`.
-    `value` harus **oid objek** (field `WorldObject.oid`), bukan item id —
-    inilah bedanya dengan paket place/break yang memakai item id.
+    `value` harus **oid objek** (field `WorldObject.oid`), bukan item id.
+    Inilah bedanya dengan paket place/break yang memakai item id.
 
     `item_id=0` memungut semua objek; `radius>0` membatasi jarak dalam petak
     dari avatar. Tanpa perintah gerak: avatar tidak berpindah tile.
@@ -1479,8 +1462,7 @@ def find_path(target: str = "door", margin: int = 10, move: bool = False) -> str
 @mcp.tool()
 @_safe
 def lua_eval(code: str, timeout_s: float = RESULT_TIMEOUT) -> str:
-    """
-    Eksekusi kode Lua di dalam proses game dan kembalikan hasilnya.
+    """Eksekusi kode Lua di dalam proses game dan kembalikan hasilnya.
 
     Contoh: lua_eval("return GetLocal().name")
             lua_eval("local w = GetWorld(); return w.name")
@@ -1534,8 +1516,7 @@ return out
 @mcp.tool()
 @_safe
 def traffic_start(max: int = 400) -> str:
-    """
-    Mulai menangkap lalu lintas paket di dalam game lewat hook
+    """Mulai menangkap lalu lintas paket di dalam game lewat hook
     OnSendPacket / OnSendPacketRaw / OnVariant / OnProcessTankUpdate.
     Paket tetap diteruskan; capturer hanya membaca.
     """
@@ -1552,8 +1533,7 @@ def traffic_stop() -> str:
 @mcp.tool()
 @_safe
 def traffic_dump(lines: int = 50, contains: str = "") -> str:
-    """
-    Ambil n kejadian lalu lintas terakhir (terbaru di bawah).
+    """Ambil n kejadian lalu lintas terakhir (terbaru di bawah).
     `contains` memfilter baris, mis. 'VARIANT', 'SENDRAW', 'OnConsoleMessage'.
     """
     raw = BRIDGE.submit(f"return _TRAFFIC_TEXT({int(lines)})", 10)
@@ -1582,8 +1562,7 @@ def traffic_clear() -> str:
 @mcp.tool()
 @_safe
 def debug_log(lines: int = 40) -> str:
-    """
-    Log internal dari dalam game: setiap perintah yang masuk, hasilnya, error,
+    """Log internal dari dalam game: setiap perintah yang masuk, hasilnya, error,
     dan semua output LogToConsole milik script lain. Diambil dari buffer
     _BRIDGE_LOG di bridge.lua (maks 300 baris).
     """
@@ -1631,8 +1610,7 @@ def api_list() -> str:
 @mcp.tool()
 @_safe
 def api_doc(name: str) -> str:
-    """
-    Baca dokumentasi resmi sebuah fungsi/struktur/contoh (mis. 'GetTile',
+    """Baca dokumentasi resmi sebuah fungsi/struktur/contoh (mis. 'GetTile',
     'GameUpdatePacket', '02_hooks.lua').
     """
     root = Path(__file__).with_name("docs")
@@ -1690,7 +1668,7 @@ def main() -> None:
     if "--http-only" in sys.argv:
         if BRIDGE_MODE == "attached":
             print(
-                f"port {port} sudah dipegang instance gt-mcp lain; "
+                f"port {port} sudah dipegang instance bothax-mcp lain; "
                 f"proses --http-only ini tidak diperlukan (keluar)",
                 file=sys.stderr,
                 flush=True,

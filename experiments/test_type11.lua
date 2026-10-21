@@ -1,4 +1,5 @@
--- Uji drop + collect type 11 dengan item tertentu (arg: global DROP_ID)
+-- Uji drop lalu pungut paket type=11 dengan oid objek.
+-- Hasil: objek hilang, inventory kembali utuh.
 local id = (type(DROP_ID) == 'number') and DROP_ID or 5026
 
 local function inv(i)

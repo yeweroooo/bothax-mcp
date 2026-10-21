@@ -1,3 +1,5 @@
+-- Uji label hook numerik vs string, percobaan kedua.
+-- Hasil: label string tidak meregistrasi callback apa pun.
 _PKT2 = {}
 local function one(p)
   if type(_PKT2) ~= 'table' or #_PKT2 >= 300 then return end

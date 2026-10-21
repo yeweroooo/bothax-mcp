@@ -1,3 +1,5 @@
+-- Percobaan pertama: rekam paket aksi tile (type 3) lewat OnSendPacketRaw.
+-- Hasil: place/break terekam, tidak ada paket collect terpisah.
 _PKT = {}
 local function rec(pkt)
   if type(_PKT) ~= 'table' or #_PKT >= 400 then return end

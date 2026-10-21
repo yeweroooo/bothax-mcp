@@ -1,14 +1,9 @@
 # GetItemByIDSafe(itemid: int) -> ItemInfo
 
-Ringkasan
-- `GetItemByIDSafe(itemid: int) -> ItemInfo`
-- Mengambil data item berdasarkan ID dengan aman dari database item.
-
-Penjelasan
-- Pilihan aman untuk ID yang valid; mengembalikan detail lengkap item.
+Mengambil data item berdasarkan ID dengan aman dari database item. Pilihan aman untuk ID yang valid; mengembalikan detail lengkap item.
 
 Parameter
-- `itemid: int` — ID item.
+- `itemid: int`: ID item.
 
 Nilai kembali
 - `ItemInfo`

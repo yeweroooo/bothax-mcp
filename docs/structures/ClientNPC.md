@@ -1,17 +1,12 @@
 # ClientNPC (id:int, type:int, pos:Vec2, target:Vec2)
 
-Deskripsi singkat
-- Representasi NPC (Non-Player Character) yang terlihat di sisi klien.
-- Berguna untuk membaca posisi, tipe, dan target pergerakan NPC.
-
-Penjelasan
-- Koordinat `pos`/`target` dalam pixel. Untuk ubah ke tile gunakan pembulatan `// 32`.
+Representasi NPC (Non-Player Character) yang terlihat di sisi klien. Berguna untuk membaca posisi, tipe, dan target pergerakan NPC. Koordinat `pos`/`target` dalam pixel. Untuk ubah ke tile gunakan pembulatan `// 32`.
 
 Bidang
-- `id: int` — ID unik NPC di dunia saat ini.
-- `type: int` — Tipe/jenis NPC.
-- `pos: Vec2` — Posisi NPC dalam koordinat pixel.
-- `target: Vec2` — Posisi tujuan NPC (pixel).
+- `id: int`: ID unik NPC di dunia saat ini.
+- `type: int`: Tipe/jenis NPC.
+- `pos: Vec2`: Posisi NPC dalam koordinat pixel.
+- `target: Vec2`: Posisi tujuan NPC (pixel).
 
 Contoh penggunaan (Lua)
 ```lua

@@ -1,11 +1,6 @@
 # RemoveHooks
 
-Ringkasan
-- `RemoveHooks()`
-- Menghapus semua hook yang terdaftar.
-
-Penjelasan
-- Berguna untuk reset cepat saat pengembangan atau ketika ingin menonaktifkan semua event listener.
+Menghapus semua hook yang terdaftar. Berguna untuk reset cepat saat pengembangan atau ketika ingin menonaktifkan semua event listener.
 
 Nilai kembali
 - Tidak ada.

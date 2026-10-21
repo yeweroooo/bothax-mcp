@@ -1,11 +1,6 @@
 # GameUpdatePacket (struct paket raw)
 
-Deskripsi singkat
-- Struktur paket mentah yang digunakan untuk event/pengiriman paket level rendah.
-- Banyak bidang memiliki alias/nama alternatif tergantung konteks.
-
-Penjelasan
-- Gunakan dengan hati-hati. Pastikan field yang dipakai sesuai tipe event agar tidak menimbulkan perilaku tak terduga.
+Struktur paket mentah yang digunakan untuk event/pengiriman paket level rendah. Banyak bidang memiliki alias/nama alternatif tergantung konteks. Gunakan dengan hati-hati. Pastikan field yang dipakai sesuai tipe event agar tidak menimbulkan perilaku tak terduga.
 
 Bidang (sesuai README)
 - `type: int`

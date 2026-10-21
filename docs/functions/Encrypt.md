@@ -1,18 +1,13 @@
 # Encrypt(text: string[, key: int]) -> string
 
-Ringkasan
-- `Encrypt(text: string[, key: int]) -> string`
-- Mengenkripsi teks menjadi string terenkripsi.
-
-Penjelasan
-- Cocok untuk menyembunyikan isi script atau data sensitif sebelum dikirim/di-embed.
+Mengenkripsi teks menjadi string terenkripsi. Cocok untuk menyembunyikan isi script atau data sensitif sebelum dikirim/di-embed.
 
 Parameter
-- `text: string` — Teks yang akan dienkripsi.
-- `key: int (opsional)` — Kunci enkripsi.
+- `text: string`: Teks yang akan dienkripsi.
+- `key: int (opsional)`: Kunci enkripsi.
 
 Nilai kembali
-- `string` — Hasil teks terenkripsi.
+- `string`: Hasil teks terenkripsi.
 
 Contoh (Lua)
 ```lua

@@ -1,16 +1,12 @@
 # HttpResponse (status:int, error:boolean, method:string, content:string)
 
-Deskripsi singkat
-- Hasil permintaan HTTP dari `MakeRequest`.
-
-Penjelasan
-- Periksa `error` dan `status` untuk memastikan permintaan berhasil sebelum memproses `content`.
+Hasil permintaan HTTP dari `MakeRequest`. Periksa `error` dan `status` untuk memastikan permintaan berhasil sebelum memproses `content`.
 
 Bidang
-- `status: int` — Kode status HTTP (200, 404, dst).
-- `error: boolean` — Apakah terjadi error.
-- `method: string` — Metode yang digunakan (GET/POST/dll.).
-- `content: string` — Konten/body respon.
+- `status: int`: Kode status HTTP (200, 404, dst).
+- `error: boolean`: Apakah terjadi error.
+- `method: string`: Metode yang digunakan (GET/POST/dll.).
+- `content: string`: Konten/body respon.
 
 Contoh penggunaan (Lua)
 ```lua

@@ -1,7 +1,6 @@
--- probe.lua — uji apakah executor benar-benar menjalankan Lua.
+-- uji apakah executor benar-benar menjalankan Lua.
 -- Sinyal 1: tulis file ke /sdcard (tidak butuh jaringan).
--- Sinyal 2: satu request ke server bridge (menguji MakeRequest).
-
+-- Sinyal 2: satu request ke bridge (menguji MakeRequest).
 local out = {}
 
 local function log(s)

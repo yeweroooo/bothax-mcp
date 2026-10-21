@@ -1,4 +1,4 @@
--- bridge.lua — kanal kontrol + log debug untuk gt-mcp
+-- bridge.lua: kanal kontrol + log debug untuk bothax-mcp
 -- Taruh di: Android/media/com.rtsoft.growtopia/scripts/bridge.lua
 -- Jalankan sekali dari menu executor BINTERNAL ("Execute RML Script").
 --
@@ -42,8 +42,6 @@ local function _fmt_http(res, ok)
     tostring(res.content):sub(1, 40))
 end
 
--------------------------------------------------------------------- log buffer
-
 local LOG = {}
 
 local function now_ms()
@@ -81,8 +79,6 @@ end
 _BRIDGE_STOP = function()
   running = false
 end
-
---------------------------------------------------------------------- serialisasi
 
 local function esc(s)
   return (s:gsub('\\', '\\\\'):gsub('\n', '\\n'):gsub('"', '\\"'))
@@ -126,8 +122,6 @@ local function enc(v, depth, seen)
   seen[v] = nil
   return '{' .. table.concat(parts, ', ') .. '}'
 end
-
------------------------------------------------------------------------ eksekusi
 
 local function run_code(code)
   local chunk, cerr = load(code, '=mcp')
@@ -180,8 +174,6 @@ local function post(path, body)
   LogToConsole('[bridge] kirim hasil gagal: ' .. last)
   return false, last
 end
-
---------------------------------------------------------------------- traffic
 
 -- Penangkap lalu lintas dalam game. Memakai hook yang sama dengan yang
 -- didokumentasikan Bothax: OnSendPacket, OnSendPacketRaw, OnVariant,
@@ -279,8 +271,6 @@ _TRAFFIC_CLEAR = function()
   _TRAFFIC.buf, _TRAFFIC.count, _TRAFFIC.dropped = {}, 0, 0
   return 'dibersihkan'
 end
-
---------------------------------------------------------------------- loop utama
 
 local function body_of(res)
   -- MakeRequest di build ini mengembalikan status = 0 (bukan 200) dan

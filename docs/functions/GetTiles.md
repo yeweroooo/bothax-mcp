@@ -1,11 +1,6 @@
 # GetTiles() -> Tile[]
 
-Ringkasan
-- `GetTiles() -> Tile[]`
-- Mengambil semua tile di world saat ini.
-
-Penjelasan
-- Mengembalikan seluruh grid tile. Iterasi pada world besar bisa memakan waktu; filter kondisi seperlunya.
+Mengambil semua tile di world saat ini. Mengembalikan seluruh grid tile. Iterasi pada world besar bisa memakan waktu; filter kondisi seperlunya.
 
 Nilai kembali
 - Array `Tile`
