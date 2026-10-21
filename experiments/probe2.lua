@@ -1,5 +1,5 @@
--- cari nama global API yang benar-benar tersedia.
--- Tidak memakai io, tidak mengandalkan MakeRequest.
+-- Find which global API names really exist.
+-- Uses no io and does not rely on MakeRequest.
 local function t(name)
   local ok, v = pcall(function() return _G[name] end)
   return name .. "=" .. (ok and type(v) or "ERR")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Baca/tulis PNG RGBA minimal, tanpa dependensi (untuk crop screenshot)."""
+"""Minimal RGBA PNG reader/writer, no dependencies, used to crop screenshots."""
 from __future__ import annotations
 
 import struct
@@ -7,7 +7,7 @@ import zlib
 
 
 def load_png(path: str) -> tuple[int, int, list[bytes]]:
-    """Kembalikan (w, h, rows) dengan rows[y] = bytes RGBA per piksel."""
+    """Return (w, h, rows) where rows[y] holds the RGBA bytes of that row."""
     d = open(path, "rb").read()
     i, idat = 8, b""
     w = h = 0
@@ -66,11 +66,11 @@ def save_png(path: str, w: int, h: int, rows: list[bytes]) -> None:
 
 
 def crop_rows(rows, w, h, x0, y0, x1, y1):
-    """Potong daftar baris RGBA tanpa menulis file."""
+    """Crop the RGBA row list without writing a file."""
     x0, x1 = max(0, x0), min(w, x1)
     y0, y1 = max(0, y0), min(h, y1)
     if x1 <= x0 or y1 <= y0:
-        raise ValueError(f"area crop kosong: ({x0},{y0})-({x1},{y1}) dari {w}x{h}")
+        raise ValueError(f"empty crop area: ({x0},{y0})-({x1},{y1}) of {w}x{h}")
     return x1 - x0, y1 - y0, [rows[y][x0 * 4:x1 * 4] for y in range(y0, y1)]
 
 

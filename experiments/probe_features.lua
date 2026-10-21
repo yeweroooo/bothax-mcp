@@ -1,6 +1,6 @@
--- Probe nama fitur lewat GetValue (nama tak dikenal mengembalikan nil).
--- Hasil: '[A] Auto collect' dan '[A] Farm: Break delay' ada di build ini.
-local kandidat = {
+-- Probe feature names through GetValue (unknown names return nil).
+-- Result: '[A] Auto collect' and '[A] Farm: Break delay' exist in this build.
+local candidates = {
   '[A] Farm: Break delay',
   '[A] Auto collect', '[A] Farm: Auto collect', '[A] Farm: Collect', '[A] Collect',
   '[A] Pickup', '[A] Farm: Pickup', '[M] Auto collect', '[A] Gem collect',

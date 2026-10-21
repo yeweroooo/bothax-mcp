@@ -1,6 +1,6 @@
--- uji apakah executor benar-benar menjalankan Lua.
--- Sinyal 1: tulis file ke /sdcard (tidak butuh jaringan).
--- Sinyal 2: satu request ke bridge (menguji MakeRequest).
+-- Check whether the executor really runs Lua.
+-- Signal 1: write a file to /sdcard (no network needed).
+-- Signal 2: one request to the bridge (exercises MakeRequest).
 local out = {}
 
 local function log(s)

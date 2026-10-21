@@ -1,5 +1,5 @@
--- Loop place + break dengan self-heal di dalam RunThread.
--- Hasil: 245 Pot O' Gems habis, gems 3.867 jadi 13.901, avatar tidak bergeser.
+-- Place and break loop with self-heal inside RunThread.
+-- Result: 245 Pot O' Gems used up, gems 3,867 -> 13,901, avatar did not move.
 local ITEM = 16706
 local TX, TY = 72, 24
 local function inv(id)

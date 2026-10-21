@@ -1,4 +1,4 @@
--- Pembaca status: gems, jumlah objek di world, isi tile target.
+-- Status reader: gems, world object count, and the contents of the target tile.
 local ok, pi = pcall(GetPlayerInfo)
 local gems = (ok and type(pi) == 'table') and tostring(pi.gems) or '?'
 local nobj = 0

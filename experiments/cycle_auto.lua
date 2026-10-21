@@ -1,5 +1,5 @@
--- Place + break Pot O' Gems dengan '[A] Auto collect' aktif.
--- Hasil: drop dari break sendiri tersedot, objek lama di tanah tidak.
+-- Place and break Pot O' Gems with '[A] Auto collect' enabled.
+-- Result: drops from its own breaks were taken, older ground objects were not.
 local tx, ty = 72, 24
 local ITEM = 16706
 local function inv(id)

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
-Regression suite untuk bothax-mcp server-side (tanpa game, tanpa perangkat).
+Regression suite for bothax-mcp, server side only (no game, no device).
 
-Fokus pada bug yang sudah terbukti dari pembacaan kode:
-  1. type_text: escaping shell bocor (karakter &;|$() memutus perintah,
-     apostrof dibuang = data hilang).
-  2. reap(): perintah yang lambat dieksekusi DUA KALI karena di-requeue
-     setelah 6 detik walau instance yang sama masih mengerjakannya.
-  3. reap(): perintah yang dicuri instance zombie HARUS dikirim ulang
-     (perilaku yang ingin dipertahankan).
-  4. mode attached: /status harus melaporkan status instance pemilik port,
-     bukan antrean lokal yang kosong.
-  5. traffic_dump: unescape string Lua salah urutan.
+Covers the bugs that were already proven by reading the code:
+  1. type_text: shell escaping leaked (&;|$() broke the command, apostrophes were
+     dropped, so data disappeared).
+  2. reap(): a slow command ran TWICE because it was re-queued after 6 seconds
+     while the same instance was still working on it.
+  3. reap(): a command stolen by a zombie instance MUST be re-sent; that behaviour
+     has to stay.
+  4. attached mode: /status must report the port owner, not an empty local queue.
+  5. traffic_dump: Lua string unescaping ran in the wrong order.
 
-Jalankan: .venv/bin/python -m unittest -v tests_gt.py
+Run: .venv/bin/python -m unittest -v tests_gt.py
 """
 from __future__ import annotations
 
@@ -66,14 +65,14 @@ class TypeTextEscaping(unittest.TestCase):
 
 
 class ReapSemantics(unittest.TestCase):
-    """reap() tidak boleh menduplikasi perintah yang masih dikerjakan."""
+    """reap() must not duplicate a command that is still running."""
 
     def setUp(self):
         self.bridge = srv._Bridge()
         self.bridge.last_poll = time.time()
 
     def _register(self, cid: str, code: str):
-        """Tiru apa yang dilakukan submit(): pending box + perintah di antrean."""
+        """Mirror what submit() does: a pending box plus a queued command."""
         box = {"event": threading.Event(), "status": None, "text": None}
         self.bridge.pending[cid] = box
         self.bridge.cmds.put((cid, code))
@@ -85,10 +84,10 @@ class ReapSemantics(unittest.TestCase):
         got = []
 
         def fake_game():
-            cmd = b.next_cmd()  # ambil seperti /poll
+            cmd = b.next_cmd()  # take it the way /poll does
             got.append(cmd[0])
             time.sleep(0.2)
-            # perintah "lambat": belum ada hasil selama > retry_after
+            # a "slow" command: no result for longer than retry_after
             for _ in range(4):
                 b.reap(retry_after=0.05)
                 time.sleep(0.05)
@@ -97,58 +96,58 @@ class ReapSemantics(unittest.TestCase):
         t.start()
         t.join(5)
         extra = b.next_cmd()
-        self.assertIsNone(extra, f"perintah dikirim ulang padahal masih jalan: {extra}")
+        self.assertIsNone(extra, f"command re-sent while still running: {extra}")
         self.assertEqual(len(got), 1)
 
     def test_requeue_when_another_instance_takes_over(self):
         b = self.bridge
-        b.active = "sid-lama"
+        b.active = "sid-old"
         self._register("cid1", "return 1")
         received = b.next_cmd()
         self.assertEqual(received[0], "cid1")
-        # instance baru (/hello) mengambil alih: perintah milik sid lama hilang
+        # a new instance (/hello) takes over: the old sid's command is gone
         b.active = "sid-baru"
         b.reap(retry_after=0.0)
         again = b.next_cmd()
-        self.assertIsNotNone(again, "perintah yang dicuri zombie tidak dikirim ulang")
+        self.assertIsNotNone(again, "a command stolen by a zombie instance was not re-sent")
         self.assertEqual(again[0], "cid1")
 
     def test_stale_command_discarded_after_timeout(self):
-        """Perintah yang sudah TIMEOUT tidak boleh dieksekusi belakangan."""
+        """A command that already timed out must not run later."""
         b = self.bridge
         out = b.submit("return hapus()", 0.2)
         self.assertIn("TIMEOUT", out)
         self.assertIsNone(
             b.next_cmd(),
-            "perintah basi tetap dieksekusi setelah pemanggilnya menyerah",
+            "a stale command still ran after its caller gave up",
         )
 
 
 class BridgeClaim(unittest.TestCase):
-    """sid basi tidak boleh memblokir instance baru selamanya."""
+    """A stale sid must not block a new instance forever."""
 
     def setUp(self):
         self.bridge = srv._Bridge()
 
-    def test_instance_pertama_langsung_aktif(self):
+    def test_first_instance_is_active(self):
         self.assertTrue(self.bridge.claim("sid-a"))
         self.assertEqual(self.bridge.active, "sid-a")
 
-    def test_sid_lain_ditolak_selama_pemegang_masih_poll(self):
+    def test_other_sid_rejected_while_holder_polls(self):
         b = self.bridge
         b.claim("sid-a")
-        b.last_poll = time.time()          # masih hidup
-        self.assertFalse(b.claim("sid-b"), "sid baru menyerobot instance yang masih aktif")
+        b.last_poll = time.time()          # still alive
+        self.assertFalse(b.claim("sid-b"), "a new sid took over a live instance")
         self.assertEqual(b.active, "sid-a")
 
-    def test_sid_basi_diambil_alih_setelah_ttl(self):
+    def test_stale_sid_taken_over_after_ttl(self):
         b = self.bridge
         b.claim("sid-a")
         b.last_poll = time.time() - (srv.ACTIVE_TTL + 5)
         self.assertTrue(b.claim("sid-b"), "sid basi memblokir instance baru (bug poll 'none' terus)")
         self.assertEqual(b.active, "sid-b")
 
-    def test_sid_kosong_selalu_dilayani(self):
+    def test_empty_sid_always_served(self):
         b = self.bridge
         b.claim("sid-a")
         b.last_poll = time.time()
@@ -162,13 +161,13 @@ class TrafficUnescape(unittest.TestCase):
         self.assertEqual(srv._unescape_lua(lua_out), 'satu\ntwo \\ quote "x"')
 
     def test_not_double_unescaped(self):
-        # \\" adalah backslash + kutip, bukan kutip yang di-escape
+        # \\" is backslash plus quote, not an escaped quote
         self.assertEqual(srv._unescape_lua('"a\\\\\\"b"'), 'a\\"b')
 
 
 class FindPathLua(unittest.TestCase):
-    def test_parse_hasil_string_terescape(self):
-        """Hasil find_path berupa string Lua ter-quote: newline harus di-unescape dulu."""
+    def test_parses_escaped_result_string(self):
+        """find_path returns a quoted Lua string, so newlines are unescaped before parsing."""
         raw = '"target=69,24\\nfg=6\\nname=main door\\nplayer=72,24\\nbbox=60,16,80,32\\ngrid\\n24....D..."'
         text = srv._unescape_lua(raw)
         lines = text.splitlines()
@@ -177,8 +176,8 @@ class FindPathLua(unittest.TestCase):
         self.assertEqual(lines[5], "grid")
         self.assertTrue(lines[6].startswith("24"))
 
-    def test_template_bisa_di_compile_lua(self):
-        """Tangkap error sintaks Lua di template sebelum dikirim ke game."""
+    def test_findpath_template_compiles(self):
+        """Catch Lua syntax errors before the template reaches the game."""
         from lupa import LuaRuntime
 
         L = LuaRuntime(unpack_returned_tuples=True)
@@ -186,12 +185,12 @@ class FindPathLua(unittest.TestCase):
         loader = L.eval("function(s) return load(s, '=findpath') end")
         res = loader(code)
         chunk, err = res if isinstance(res, tuple) else (res, None)
-        self.assertIsNotNone(chunk, f"template Lua tidak valid: {err}")
+        self.assertIsNotNone(chunk, f"invalid Lua template: {err}")
 
     def test_lua_literal_escape(self):
         self.assertEqual(srv._lua_literal('a"b\\c'), '"a\\"b\\\\c"')
 
-    def test_template_move_bisa_di_compile(self):
+    def test_move_template_compiles(self):
         from lupa import LuaRuntime
 
         L = LuaRuntime(unpack_returned_tuples=True)
@@ -199,17 +198,17 @@ class FindPathLua(unittest.TestCase):
         loader = L.eval("function(s) return load(s, '=move') end")
         res = loader(code)
         chunk, err = res if isinstance(res, tuple) else (res, None)
-        self.assertIsNotNone(chunk, f"template move tidak valid: {err}")
+        self.assertIsNotNone(chunk, f"invalid move template: {err}")
         self.assertNotIn("{tx}", code)
 
     def test_kv_parse(self):
-        d = srv._kv_parse("chk=true ok=true err=true dari=72,24 ke=69,24 pos=2214,770")
-        self.assertEqual(d["dari"], "72,24")
-        self.assertEqual(d["ke"], "69,24")
+        d = srv._kv_parse("chk=true ok=true err=true from=72,24 to=69,24 pos=2214,770")
+        self.assertEqual(d["from"], "72,24")
+        self.assertEqual(d["to"], "69,24")
 
 
 class CollectLua(unittest.TestCase):
-    """Template paket collect (type=11) harus valid dan memakai oid objek."""
+    """The collect template (type=11) must be valid Lua and use the object oid."""
 
     def _compile(self, code, name):
         from lupa import LuaRuntime
@@ -219,39 +218,38 @@ class CollectLua(unittest.TestCase):
         res = loader(code)
         return res if isinstance(res, tuple) else (res, None)
 
-    def test_template_collect_bisa_di_compile(self):
+    def test_collect_template_compiles(self):
         code = srv._COLLECT_LUA.format(item=0, radius=0.0, delay=60)
         chunk, err = self._compile(code, "collect")
-        self.assertIsNotNone(chunk, f"template collect tidak valid: {err}")
+        self.assertIsNotNone(chunk, f"invalid collect template: {err}")
         self.assertNotIn("{item}", code)
 
-    def test_template_collect_pakai_oid_dan_type_11(self):
+    def test_collect_template_uses_oid_and_type_11(self):
         code = srv._COLLECT_LUA.format(item=5026, radius=3.5, delay=10)
         self.assertIn("type = 11", code)
         self.assertIn("value = o.oid", code)
         self.assertIn("local item = 5026", code)
         self.assertIn("local radius = 3.5", code)
 
-    def test_template_list_objects_bisa_di_compile(self):
+    def test_list_objects_template_compiles(self):
         chunk, err = self._compile(srv._LIST_OBJECTS_LUA, "listobj")
-        self.assertIsNotNone(chunk, f"template list_objects tidak valid: {err}")
+        self.assertIsNotNone(chunk, f"invalid list_objects template: {err}")
 
-    def test_template_tanpa_brace_ganda(self):
-        """Template yang tidak lewat .format() tidak boleh punya `{{}}`.
+    def test_raw_template_has_no_double_brace(self):
+        """A template without .format() must not contain `{{}}`.
 
-        `{{}}` hanya untuk template ber-.format(); kalau tertinggal di template
-        mentah, Lua membacanya sebagai tabel berisi tabel kosong. Akibatnya
-        `daftar[1]` jadi table dan `table.concat` gagal saat runtime.
-        """
+        `{{}}` belongs to formatted templates only; left in a raw template, Lua reads it as a
+        table holding an empty table, so `list[1]` is a table and `table.concat` fails at
+        runtime."""
         self.assertNotIn("{{", srv._LIST_OBJECTS_LUA)
 
-    def test_template_drop_bisa_di_compile(self):
+    def test_drop_template_compiles(self):
         code = srv._DROP_LUA.format(item=5026, amount=0)
         chunk, err = self._compile(code, "drop")
-        self.assertIsNotNone(chunk, f"template drop tidak valid: {err}")
+        self.assertIsNotNone(chunk, f"invalid drop template: {err}")
 
-    def test_template_drop_pakai_pipa_penutup(self):
-        """`item_drop|<id>|` butuh pipa penutup; tanpa itu server tidak drop."""
+    def test_drop_template_has_trailing_pipe(self):
+        """`item_drop|<id>|` needs the trailing pipe; without it the server ignores the drop."""
         code = srv._DROP_LUA.format(item=5026, amount=3)
         self.assertIn("dialog_name|drop", code)
         self.assertIn("item_drop|", code)
@@ -263,33 +261,33 @@ class Pathfinding(unittest.TestCase):
     def _floor(self, y=26, x0=0, x1=20):
         return {(x, y) for x in range(x0, x1 + 1)}
 
-    def test_jalan_datar(self):
+    def test_flat_walk(self):
         solids = self._floor()
         p = srv._bfs_path(solids, (10, 25), (5, 25), (0, 20, 20, 30))
         self.assertIsNotNone(p)
         self.assertEqual((p[0][0], p[0][1]), (10, 25))
         self.assertEqual((p[-1][0], p[-1][1]), (5, 25))
-        self.assertEqual({s[2] for s in p[1:]}, {"jalan"})
+        self.assertEqual({s[2] for s in p[1:]}, {"walk"})
 
-    def test_perlu_lompat_melewati_dinding_setinggi_avatar(self):
+    def test_jump_over_avatar_high_wall(self):
         solids = self._floor()
-        solids.add((8, 25))  # satu blok menghalangi jalur datar
+        solids.add((8, 25))  # a single block on a flat path
         p = srv._bfs_path(solids, (10, 25), (5, 25), (0, 20, 20, 30))
-        self.assertIsNotNone(p, "harus bisa melewati rintangan 1 blok dengan lompat")
-        self.assertIn("lompat", [s[2] for s in p])
+        self.assertIsNotNone(p, "a one-block obstacle must be cleared with a jump")
+        self.assertIn("jump", [s[2] for s in p])
 
-    def test_dinding_terlalu_tinggi_tidak_ada_jalur(self):
+    def test_wall_too_high_has_no_route(self):
         solids = self._floor()
         solids |= {(8, 25), (8, 24), (8, 23), (8, 22), (8, 21), (8, 20)}
         p = srv._bfs_path(solids, (10, 25), (5, 25), (0, 20, 20, 30))
         self.assertIsNone(p)
 
-    def test_boleh_jatuh_ke_lantai_lebih_rendah(self):
-        # lantai tinggi di kiri, lantai rendah di kanan
+    def test_fall_to_lower_floor(self):
+        # high floor on the left, low floor on the right
         solids = {(x, 26) for x in range(0, 11)} | {(x, 29) for x in range(11, 21)}
         p = srv._bfs_path(solids, (5, 25), (15, 28), (0, 20, 20, 30))
         self.assertIsNotNone(p)
-        self.assertIn("jatuh", [s[2] for s in p])
+        self.assertIn("fall", [s[2] for s in p])
 
 
 class Portability(unittest.TestCase):
@@ -306,21 +304,21 @@ class Portability(unittest.TestCase):
         finally:
             _os.environ["PATH"] = old
 
-    def test_tmp_tidak_hardcode_slash_tmp(self):
+    def test_tmp_path_not_hardcoded(self):
         import tempfile as _tf
         p = srv._tmp_png("unit")
         self.assertTrue(p.startswith(_tf.gettempdir()), p)
         self.assertNotIn("/tmp/", p.replace(_tf.gettempdir(), ""), p)
 
-    def test_doctor_bentuk_keluaran(self):
+    def test_doctor_output_shape(self):
         data = json.loads(srv.bridge_doctor(auto_fix=False))
-        self.assertIn("langkah", data)
-        self.assertIn("kesimpulan", data)
-        self.assertTrue(any(s["cek"] == "port bridge host" for s in data["langkah"]))
+        self.assertIn("steps", data)
+        self.assertIn("conclusion", data)
+        self.assertTrue(any(s["check"] == "bridge port on host" for s in data["steps"]))
 
 
 class AttachedMode(unittest.TestCase):
-    """Instance kedua harus melayani /status dan /enqueue lewat pemilik port."""
+    """A second instance must serve /status and /enqueue through the port owner."""
 
     def test_attached_status_and_enqueue(self):
         port = free_port()
@@ -343,7 +341,7 @@ class AttachedMode(unittest.TestCase):
                 except Exception:
                     time.sleep(0.1)
             else:
-                self.fail("owner tidak siap")
+                self.fail("owner is not ready")
 
             # instance kedua: harus masuk mode attached, bukan mati
             code = (
@@ -364,9 +362,9 @@ class AttachedMode(unittest.TestCase):
             self.assertEqual(status["mode"], "attached")
             self.assertEqual(status["port"], port)
 
-            # klien palsu "game" menyapa owner + polling: hanya owner yang tahu
-            # soal ini, jadi status versi attached harus mencerminkannya.
-            urllib.request.urlopen(f"http://127.0.0.1:{port}/hello?sid=uji", timeout=3).read()
+            # the fake "game" client greets the owner and polls: only the owner knows
+            # this state, so attached status has to reflect it.
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/hello?sid=test", timeout=3).read()
             threading.Thread(
                 target=lambda: urllib.request.urlopen(
                     f"http://127.0.0.1:{port}/poll?sid=uji", timeout=5
@@ -390,10 +388,10 @@ class AttachedMode(unittest.TestCase):
             self.assertEqual(st2["mode"], "attached", st2)
             self.assertIsNotNone(
                 st2.get("last_poll_ago_s"),
-                f"status attached tidak membaca status owner: {st2}",
+                f"attached status did not read the owner state: {st2}",
             )
 
-            # /enqueue di owner: tanpa klien polling -> TIMEOUT dari owner
+            # /enqueue on the owner: with no polling client it must time out
             req = urllib.request.Request(
                 f"http://127.0.0.1:{port}/enqueue",
                 data=json.dumps({"code": "return 1", "timeout": 1}).encode(),

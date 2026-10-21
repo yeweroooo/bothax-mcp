@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Uji bridge.lua tanpa game: stub MakeRequest / RunThread / LogToConsole / Sleep
-memakai Lua 5.4 (lupa), lalu jalankan satu perintah dan periksa hasilnya.
+Exercise bridge.lua without the game: stub MakeRequest / RunThread / LogToConsole / Sleep
+with Lua 5.4 (lupa), then run one command and check the result.
 """
 from lupa import LuaRuntime
 
@@ -18,7 +18,7 @@ function MakeRequest(url, method, headers, content, timeout)
     if polls == 1 then
       return { status = 200, content = 'abc123|' .. queue_cmd }
     end
-    -- beri tahu bridge untuk berhenti dengan cara yang didukung: _BRIDGE_STOP()
+    -- stop the bridge the supported way: _BRIDGE_STOP()
     if done then pcall(_BRIDGE_STOP) end
     return { status = 200, content = 'none' }
   elseif url:find('/result') then
@@ -44,7 +44,7 @@ function GetInventory() return { items = { [1] = { id = 242, count = 3 } } } end
 
 function GetObjectList() return { [1] = { id = 1 }, [2] = { id = 2 } } end
 
--- hook palsu untuk menguji capturer
+-- fake hooks used to exercise the capturer
 _hooks = {}
 function AddHook(ev, label, cb) _hooks[label] = { ev = ev, cb = cb } end
 function RemoveHook(label) _hooks[label] = nil end
@@ -81,7 +81,7 @@ entries = buf(10)
 print("BUFFER _BRIDGE_LOG:")
 for i in range(1, len(entries) + 1):
     print("  ", entries[i])
-assert len(entries) >= 2, "buffer log kosong"
+assert len(entries) >= 2, "log buffer is empty"
 
 # ---- uji traffic capture
 g = L.globals()
@@ -95,11 +95,11 @@ print("DUMP:")
 for i in range(1, len(dump) + 1):
     print("  ", dump[i])
 stats = g._TRAFFIC_STATS()
-print("STATS: total=", stats.total, "buffer=", stats.buffer, "aktif=", stats.aktif)
+print("STATS: total=", stats.total, "buffer=", stats.buffer, "active=", stats.active)
 print("STOP:", g._TRAFFIC_STOP())
-assert len(dump) == 4, f"harusnya 4 kejadian, dapat {len(dump)}"
+assert len(dump) == 4, f"expected 4 events, got {len(dump)}"
 txt = g._TRAFFIC_TEXT(10)
 print("TEXT separator count:", txt.count("\x1e") + 1)
-assert txt.count("\x1e") == 3, "pemisah 0x1e harus 3 untuk 4 baris"
-assert g._TRAFFIC_STATS().aktif is False
+assert txt.count("\x1e") == 3, "four records need three 0x1e separators"
+assert g._TRAFFIC_STATS().active is False
 print("  [OK] traffic capture + dump + stop")

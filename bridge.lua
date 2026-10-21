@@ -1,27 +1,27 @@
--- bridge.lua: kanal kontrol + log debug untuk bothax-mcp
--- Taruh di: Android/media/com.rtsoft.growtopia/scripts/bridge.lua
--- Jalankan sekali dari menu executor BINTERNAL ("Execute RML Script").
+-- bridge.lua: control channel and debug log for bothax-mcp
+-- Install to: Android/media/com.rtsoft.growtopia/scripts/bridge.lua
+-- Run it once from the BINTERNAL executor menu ("Execute RML Script").
 --
--- Alur:
---   loop  : MakeRequest(BASE..'/poll')  -> "<id>|<kode lua>"
---   eksekusi kode, serialisasi hasil
---   kirim : MakeRequest(BASE..'/result', 'POST', body)
+-- Flow:
+--   loop    : MakeRequest(BASE..'/poll') -> "<id>|<lua code>"
+--   run the code, serialise the result
+--   post    : MakeRequest(BASE..'/result', 'POST', body)
 --
--- Debug dari dalam game:
---   _BRIDGE_LOG(n)   -> n entri log terakhir (perintah, hasil, error, LogToConsole)
---   _BRIDGE_STOP()   -> hentikan loop
+-- Debug from inside the game:
+--   _BRIDGE_LOG(n)   -> the last n log entries (commands, results, errors, LogToConsole)
+--   _BRIDGE_STOP()   -> stop the loop
 --
--- BASE harus bisa dijangkau dari dalam game: pakai `adb reverse tcp:8770 tcp:8770`
--- supaya 127.0.0.1:8770 di perangkat mengarah ke MCP server di PC.
+-- BASE must be reachable from inside the game: `adb reverse tcp:8770 tcp:8770`
+-- maps 127.0.0.1:8770 on the device to the MCP server on the PC.
 
 local BASE = 'http://127.0.0.1:8770'
 local POLL_MS = 30000
 local LOG_MAX = 300
 local running = true
 
--- Penanda boot: dikirim ke server lewat /diag SEBELUM apa pun yang bisa gagal.
--- Tanpa ini, script yang mati di tengah jalan tidak meninggalkan jejak sama
--- sekali (konsol mod tidak terbaca dari luar), dan server hanya melihat diam.
+-- Boot marker: sent to the server through /diag BEFORE anything that can fail.
+-- Without it a script that dies midway leaves no trace at all (the mod console is
+-- not readable from outside) and the server only sees silence.
 local function _boot(msg)
   local q = tostring(msg):gsub('[^%w%-%._~ ]', function(c)
     return string.format('%%%02X', string.byte(c))
@@ -29,14 +29,14 @@ local function _boot(msg)
   pcall(MakeRequest, BASE .. '/diag?msg=' .. q, 'GET', nil, nil, 5000)
 end
 
-_boot('BOOT v2 mulai')
+_boot('BOOT v2 start')
 
--- Probe sekali di awal: cetak ke konsol mod apa yang SEBENARNYA dikembalikan
--- MakeRequest untuk server lokal. Tanpa ini kegagalan jaringan hanya terlihat
--- sebagai "menunggu perintah" yang tidak menjelaskan apa pun.
+-- One probe at startup: print what MakeRequest actually returns for the local
+-- server. Without it a network failure only shows up as "waiting for commands",
+-- which explains nothing.
 local function _fmt_http(res, ok)
-  if not ok then return 'pcall gagal: ' .. tostring(res) end
-  if type(res) ~= 'table' then return 'bukan tabel: ' .. type(res) .. ' ' .. tostring(res) end
+  if not ok then return 'pcall failed: ' .. tostring(res) end
+  if type(res) ~= 'table' then return 'not a table: ' .. type(res) .. ' ' .. tostring(res) end
   return string.format('status=%s error=%s content(%s)=%s',
     tostring(res.status), tostring(res.error), type(res.content),
     tostring(res.content):sub(1, 40))
@@ -56,7 +56,7 @@ local function log_add(tag, msg)
   return line
 end
 
--- Output konsol mod tetap jalan, tapi ikut terekam untuk dilihat dari MCP.
+-- The mod console still receives output, and every line is recorded for MCP.
 local orig_console = LogToConsole
 local function blog(msg)
   log_add('bridge', msg)
@@ -151,12 +151,12 @@ local function post(path, body)
   local url = BASE .. path
   local last = '?'
 
-  -- 1) POST tanpa header
+  -- 1) POST without headers
   local ok1, res1 = pcall(MakeRequest, url, 'POST', nil, body, 15000)
   if ok1 and ok_res(res1) then return true, res1.status end
   last = tostring(not ok1 and res1 or (res1 and (res1.error or res1.status)) or 'nil')
 
-  -- 2) POST dengan header
+  -- 2) POST with headers
   local ok2, res2 = pcall(MakeRequest, url, 'POST',
     { ['Content-Type'] = 'text/plain' }, body, 15000)
   if ok2 and ok_res(res2) then return true, res2.status end
@@ -171,14 +171,14 @@ local function post(path, body)
     last = tostring(not ok3 and res3 or (res3 and (res3.error or res3.status)) or 'nil')
   end
 
-  LogToConsole('[bridge] kirim hasil gagal: ' .. last)
+  LogToConsole('[bridge] posting the result failed: ' .. last)
   return false, last
 end
 
--- Penangkap lalu lintas dalam game. Memakai hook yang sama dengan yang
--- didokumentasikan Bothax: OnSendPacket, OnSendPacketRaw, OnVariant,
--- OnProcessTankUpdate. Callback TIDAK mengembalikan true, jadi paket tetap
--- diteruskan (tidak memblokir apa pun).
+-- In-game traffic capture. Hooks only read the packets
+-- documented by Bothax: OnSendPacket, OnSendPacketRaw, OnVariant,
+-- OnProcessTankUpdate. The callbacks never return true, so packets keep
+-- flowing and nothing is blocked.
 
 _TRAFFIC = { on = false, max = 400, buf = {}, count = 0, dropped = 0 }
 
@@ -208,7 +208,7 @@ local function pkt_str(p)
 end
 
 _TRAFFIC_START = function(max)
-  if _TRAFFIC.on then return 'sudah aktif' end
+  if _TRAFFIC.on then return 'already active' end
   _TRAFFIC.max = tonumber(max) or 400
   _TRAFFIC.buf, _TRAFFIC.count, _TRAFFIC.dropped = {}, 0, 0
 
@@ -228,19 +228,19 @@ _TRAFFIC_START = function(max)
   end)
 
   _TRAFFIC.on = true
-  blog('traffic capture aktif (max ' .. tostring(_TRAFFIC.max) .. ')')
-  return 'aktif'
+  blog('traffic capture active (max ' .. tostring(_TRAFFIC.max) .. ')')
+  return 'active'
 end
 
 _TRAFFIC_STOP = function()
-  if not _TRAFFIC.on then return 'tidak aktif' end
+  if not _TRAFFIC.on then return 'not active' end
   pcall(RemoveHook, '_traf_s')
   pcall(RemoveHook, '_traf_sr')
   pcall(RemoveHook, '_traf_v')
   pcall(RemoveHook, '_traf_p')
   _TRAFFIC.on = false
-  blog('traffic capture berhenti, ' .. tostring(_TRAFFIC.count) .. ' kejadian')
-  return 'berhenti'
+  blog('traffic capture stopped, ' .. tostring(_TRAFFIC.count) .. ' events')
+  return 'stopped'
 end
 
 _TRAFFIC_DUMP = function(n)
@@ -251,8 +251,8 @@ _TRAFFIC_DUMP = function(n)
   return out
 end
 
--- Versi teks: dipisah record-separator (0x1e) supaya bisa dipecah per baris
--- di sisi MCP tanpa tabrakan dengan isi paket.
+-- Text form: records separated by 0x1e so the MCP side can split them
+-- without colliding with packet contents.
 _TRAFFIC_TEXT = function(n)
   return table.concat(_TRAFFIC_DUMP(n), '\30')
 end
@@ -263,7 +263,7 @@ _TRAFFIC_STATS = function()
     local k = line:match('^%d+%s+(%S+)')
     if k then kinds[k] = (kinds[k] or 0) + 1 end
   end
-  return { aktif = _TRAFFIC.on, total = _TRAFFIC.count, buffer = #_TRAFFIC.buf,
+  return { active = _TRAFFIC.on, total = _TRAFFIC.count, buffer = #_TRAFFIC.buf,
            dropped = _TRAFFIC.dropped, per_jenis = kinds }
 end
 
@@ -273,8 +273,8 @@ _TRAFFIC_CLEAR = function()
 end
 
 local function body_of(res)
-  -- MakeRequest di build ini mengembalikan status = 0 (bukan 200) dan
-  -- error = false saat sukses; yang menentukan hanya error + content.
+  -- MakeRequest in this build returns status = 0 (not 200) and
+  -- error = false on success; only error and content decide the outcome.
   if type(res) ~= 'table' then return nil, 'res bukan tabel' end
   local er = res.error
   if er ~= nil and er ~= false and tostring(er) ~= '' and tostring(er) ~= 'false'
@@ -288,13 +288,13 @@ local function body_of(res)
 end
 
 local function loop()
-  blog('aktif, menunggu perintah dari MCP')
+  blog('active, waiting for commands from MCP')
   local okp, resp = pcall(MakeRequest, BASE .. '/health', 'GET', nil, nil, 5000)
   blog('PROBE /health: ' .. _fmt_http(resp, okp))
   local errors = 0
   local diag = 0
   local hb = 0
-  -- identitas instance: berguna saat ada lebih dari satu skrip berjalan
+  -- instance identity: matters when more than one script is running
   local sid = string.format('%x%x', math.floor((now_ms() * 1000) % 2147483647), math.random(65535))
   pcall(MakeRequest, BASE .. '/hello?sid=' .. sid, 'GET', nil, nil, 8000)
   blog('instance ' .. sid)
@@ -317,29 +317,29 @@ local function loop()
       diag = diag + 1
       log_add('warn', 'poll: ' .. tostring(why))
       if diag <= 3 then
-        -- tampil di konsol mod: satu-satunya kanal balik saat server belum
-        -- bisa dijangkau
-        blog('poll GAGAL: ' .. tostring(why))
+        -- mod console is the only feedback channel while the server is
+        -- unreachable
+        blog('poll FAILED: ' .. tostring(why))
       end
     end
 
     if payload and payload ~= 'none' and payload ~= '' then
       errors = 0
-      -- buang hanya pembungkus kutip ganda dari enc() (jangan sentuh isi kode)
+      -- strip only the double-quote wrapper added by enc(); never touch the code body
       if payload:sub(1, 1) == '"' and payload:sub(-1) == '"' then
         payload = payload:sub(2, -2)
       end
       blog('terima: ' .. payload:sub(1, 60))
       local id, code = payload:match('^([%w]+)|(.*)$')
       if not id then
-        -- tanpa prefix id: perlakukan seluruh payload sebagai kode
+        -- no id prefix: treat the whole payload as code
         code, id = payload, nil
       end
       local okack = pcall(MakeRequest,
         BASE .. '/ack?sid=' .. sid .. '&id=' .. tostring(id or '-') .. '&len=' .. #tostring(code or ''),
         'GET', nil, nil, 8000)
       if not okack then
-        pcall(MakeRequest, BASE .. '/diag?msg=' .. urlenc('ack gagal: ' .. payload:sub(1, 60)),
+        pcall(MakeRequest, BASE .. '/diag?msg=' .. urlenc('ack failed: ' .. payload:sub(1, 60)),
           'GET', nil, nil, 8000)
       end
       if code and code ~= '' then
@@ -351,24 +351,24 @@ local function loop()
         local body = (id and (id .. '|') or '') .. (good and 'ok' or 'err') .. '|' .. out
         local sent, err = post('/result', body)
         if not sent then
-          log_add('error', 'gagal kirim hasil: ' .. tostring(err))
+          log_add('error', 'failed to post the result: ' .. tostring(err))
         end
       end
     else
       errors = errors + 1
       if errors == 3 then
-        blog('menunggu perintah (tidak ada perintah baru)')
+        blog('waiting for commands (none new)')
       end
       Sleep(500)
     end
   end
-  blog('berhenti')
+  blog('stopped')
 end
 
 _boot('SETUP ok, menjalankan loop')
 local ok_thread, err_thread = pcall(RunThread, loop)
 if not ok_thread then
-  _boot('RunThread GAGAL: ' .. tostring(err_thread))
-  blog('RunThread gagal: ' .. tostring(err_thread))
+  _boot('RunThread FAILED: ' .. tostring(err_thread))
+  blog('RunThread failed: ' .. tostring(err_thread))
 end
 

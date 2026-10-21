@@ -1,94 +1,95 @@
 # bothax-mcp
 
-MCP server untuk mengendalikan Growtopia di Android. Dua jalur kontrol: **ADB** untuk
-sentuhan, screenshot, file, dan proses; **bridge Lua** untuk memanggil API Bothax
-(BINTERNAL) yang hanya hidup di dalam proses game. Ada 34 tool.
+An MCP server that drives Growtopia on Android. It has two control paths: **ADB** for
+taps, swipes, screenshots, files, and processes, and a **Lua bridge** for the Bothax
+(BINTERNAL) API that only exists inside the game process. 34 tools in total.
 
-Isi repo: `server.py` (MCP + HTTP), `bridge.lua` (skrip di dalam game), tiga berkas tes,
-`experiments/` berisi skrip percobaan beserta hasilnya, dan `docs/` berisi dokumentasi API
-Bothax plus catatan klien.
+The repo holds `server.py` (MCP + HTTP), `bridge.lua` (the script that runs in game),
+three test files, `experiments/` with the probe scripts and what each of them proved,
+and `docs/` with the Bothax API reference plus client setup notes.
 
-## Kenapa harus lewat Lua
+## Why it has to go through Lua
 
-API Bothax terikat ke proses game: tidak ada socket, CLI, atau library terpisah yang bisa
-memanggil `GetLocal`, `GetTiles`, `SendPacketRaw`, atau `FindPath`. Satu-satunya jalan
-adalah menjalankan Lua di dalam proses itu, lalu menyambungkannya ke PC:
+The Bothax API lives inside the game process. There is no socket, CLI, or separate
+library that can call `GetLocal`, `GetTiles`, `SendPacketRaw`, or `FindPath`. The only
+way in is to run Lua inside that process and connect it back to the PC:
 
-    bridge.lua  --HTTP-->  127.0.0.1:8770  --adb reverse-->  server.py di PC
+    bridge.lua  --HTTP-->  127.0.0.1:8770  --adb reverse-->  server.py on the PC
 
-`adb reverse tcp:8770 tcp:8770` meneruskan port 8770 di perangkat ke port 8770 di PC.
-Tanpa mapping itu, `MakeRequest` dari dalam game tidak sampai ke mana pun.
+`adb reverse tcp:8770 tcp:8770` forwards port 8770 on the device to port 8770 on the PC.
+Without that mapping, `MakeRequest` inside the game goes nowhere.
 
-## Instalasi
+## Install
 
     python3 -m venv .venv
     .venv/bin/pip install "mcp[cli]"
-    .venv/bin/pip install lupa        # hanya untuk tes template Lua
+    .venv/bin/pip install lupa        # only needed to compile-test the Lua templates
 
-Butuh `adb` di PATH (`ANDROID_HOME`/`ANDROID_SDK_ROOT` juga dibaca), Python 3.10 ke atas,
-dan perangkat dengan USB debugging atau adb nirkabel.
+Requirements: `adb` on `PATH` (`ANDROID_HOME` and `ANDROID_SDK_ROOT` are also read),
+Python 3.10 or newer, and a device with USB debugging or wireless adb.
 
-## Menyiapkan perangkat (sekali per boot)
+## Device setup, once per boot
 
-1. `adb devices` atau `adb connect <ip>:5555` sampai perangkat tampil sebagai `device`.
-2. Jalankan server dari klien MCP, atau `python server.py --http-only` untuk kontrol
-   manual lewat `curl`.
-3. `install_bridge()`: push `bridge.lua` ke
-   `/sdcard/Android/media/com.rtsoft.growtopia/scripts/` dan pasang `adb reverse`.
-4. Di game, buka executor BINTERNAL, centang daftar API, jalankan `bridge.lua`.
-5. `bridge_status()` harus menjawab `"polling": true`.
+1. `adb devices`, or `adb connect <ip>:5555`, until the device shows up as `device`.
+2. Start the server from your MCP client, or run `python server.py --http-only` for
+   manual control over `curl`.
+3. `install_bridge()`: pushes `bridge.lua` to
+   `/sdcard/Android/media/com.rtsoft.growtopia/scripts/` and installs `adb reverse`.
+4. In game, open the BINTERNAL executor, enable the API list, then run `bridge.lua`.
+5. `bridge_status()` must answer `"polling": true`.
 
-Kalau ada yang gagal, `bridge_doctor()` memeriksa adb, reverse, dan polling satu per satu,
-lalu memperbaiki mapping yang hilang.
+If a step fails, `bridge_doctor()` checks adb, the reverse mapping, and polling one by
+one, then repairs a missing mapping.
 
-## Menghubungkan klien MCP
+## Connecting an MCP client
 
-Server memakai stdio standar. Contoh JSON:
+The server speaks plain stdio MCP:
 
 ```json
 {
   "mcpServers": {
     "bothax-mcp": {
-      "command": "/path/ke/bothax-mcp/.venv/bin/python",
-      "args": ["/path/ke/bothax-mcp/server.py"]
+      "command": "/path/to/bothax-mcp/.venv/bin/python",
+      "args": ["/path/to/bothax-mcp/server.py"]
     }
   }
 }
 ```
 
-Hermes memakai kunci `mcp_servers` dengan bentuk yang sama. Potongan config untuk klien
-lain ada di [docs/clients.md](docs/clients.md).
+Hermes uses the `mcp_servers` key with the same shape. Config snippets for other clients
+are in [docs/clients.md](docs/clients.md).
 
-Kalau port 8770 sudah dipegang proses `--http-only`, server masuk mode `attached`: perintah
-Lua diteruskan ke proses pemilik port, dan tool ADB tetap jalan di proses ini.
+If port 8770 is already held by a `--http-only` process, the server starts in `attached`
+mode: Lua commands are forwarded to the port owner and the ADB tools keep working in
+this process.
 
-## Tool
+## Tools
 
-| Tool | Kegunaan |
+| Tool | What it does |
 |---|---|
-| `device_info` | model, versi Android, status game, status bridge |
-| `screenshot` / `screenshot_crop` / `panel_crop` | tangkap layar, potong area, perbesar panel mod |
-| `tap` / `swipe` / `key` / `type_text` | input layar dan teks ASCII |
-| `launch_game` / `stop_game` | jalankan atau hentikan game, lalu verifikasi prosesnya |
-| `logcat` | log perangkat, opsional difilter |
-| `install_apk` | install APK dan laporkan kegagalan sebenarnya |
-| `push_script` / `list_scripts` | kelola skrip di folder game |
-| `install_bridge` | push `bridge.lua` dan pasang `adb reverse` |
-| `bridge_status` | apakah skrip di game sedang polling |
-| `bridge_doctor` / `adb_reconnect` | diagnosa dan pemulihan transport |
-| `lua_eval` | eksekusi Lua di proses game, hasil dikembalikan |
-| `game_snapshot` | pemain, dunia, inventori, jumlah objek, posisi petak |
-| `go_to` | pindah avatar ke tile (`CheckPath`, `FindPath`, verifikasi posisi) |
-| `find_path` | jalur BFS ke objek terdekat plus peta ASCII; `move=true` ikut memindah avatar |
-| `list_objects` | objek di tanah: oid, item id, nama, tile |
-| `collect_objects` | pungut objek dengan paket `type=11`, bisa difilter item dan radius |
-| `drop_item` | jatuhkan item, `amount=0` untuk seluruh stack |
-| `traffic_start` / `traffic_dump` / `traffic_stats` / `traffic_stop` / `traffic_clear` | tangkap paket di dalam game |
-| `debug_log` | log internal bridge: perintah, hasil, error, output `LogToConsole` |
-| `debug_state` | ringkasan diagnostik gabungan |
-| `api_list` / `api_doc` | dokumentasi fungsi dan struktur Bothax |
+| `device_info` | model, Android version, game state, bridge state |
+| `screenshot` / `screenshot_crop` / `panel_crop` | capture the screen, crop a region, zoom the mod panel |
+| `tap` / `swipe` / `key` / `type_text` | screen and ASCII text input |
+| `launch_game` / `stop_game` | start or stop the game, then verify the process |
+| `logcat` | device log, optionally filtered |
+| `install_apk` | install an APK and report the real failure |
+| `push_script` / `list_scripts` | manage scripts in the game folder |
+| `install_bridge` | push `bridge.lua` and install `adb reverse` |
+| `bridge_status` | whether the in-game script is polling |
+| `bridge_doctor` / `adb_reconnect` | diagnose and recover the transport |
+| `lua_eval` | run Lua in the game process and return the result |
+| `game_snapshot` | player, world, inventory, object count, avatar tile |
+| `go_to` | move the avatar to a tile (`CheckPath`, `FindPath`, position check) |
+| `find_path` | BFS route to the nearest matching object plus an ASCII map; `move=true` also moves the avatar |
+| `list_objects` | ground objects: oid, item id, name, tile |
+| `collect_objects` | pick up objects with a `type=11` packet, filterable by item and radius |
+| `drop_item` | drop an item, `amount=0` drops the whole stack |
+| `traffic_start` / `traffic_dump` / `traffic_stats` / `traffic_stop` / `traffic_clear` | capture packets inside the game |
+| `debug_log` | bridge log: commands, results, errors, `LogToConsole` output |
+| `debug_state` | combined diagnostic summary |
+| `api_list` / `api_doc` | Bothax function and structure documentation |
 
-`lua_eval` adalah pintu utama; apa pun yang bisa dilakukan executor bisa dikirim dari sini.
+`lua_eval` is the main door: anything the executor can do can be sent from here.
 
 ```python
 lua_eval("return GetLocal().name")
@@ -96,120 +97,123 @@ lua_eval("local w=GetWorld(); return {w.name, w.width, w.height}")
 lua_eval("return #GetTiles()")
 ```
 
-## Paket yang sudah terverifikasi
+## Packets verified live
 
     place   {type=3,  state=0, value=<item id>, px=x, py=y, x=pos.x, y=pos.y}
     break   {type=3,  state=0, value=18, px=x, py=y}          -- 18 = Fist
-    collect {type=11, state=0, value=<oid objek>, px=obj.pos.x, py=obj.pos.y}
+    collect {type=11, state=0, value=<object oid>, px=obj.pos.x, py=obj.pos.y}
     drop    "action|dialog_return\ndialog_name|drop\nitem_drop|<id>|\nitem_count|<n>\n"
 
-- `collect` memakai **oid objek**, bukan item id. Satu objek bisa membawa beberapa unit,
-  jadi jumlah barang tidak sama dengan jumlah objek. Avatar tidak perlu bergerak.
-- Satu paket `drop` sudah cukup. Pipa penutup setelah id (`item_drop|5026|`) wajib ada.
-- `break` diulang sampai `GetTile(x,y).fg` berubah. Jumlah hit sama dengan
+- `collect` carries the **object oid**, not the item id. One object can hold several
+  units, so item count and object count differ. The avatar does not have to move.
+- One `drop` packet is enough. The trailing pipe after the id (`item_drop|5026|`) is
+  required.
+- `break` is repeated until `GetTile(x,y).fg` changes. The hit count equals
   `GetItemInfo(id).breakhit`.
 
-## Protokol bridge
+## Bridge protocol
 
-Plain text, bukan JSON, supaya sisi Lua tidak butuh parser.
+Plain text, not JSON, so the Lua side needs no parser.
 
-| Endpoint | Balasan |
+| Endpoint | Answer |
 |---|---|
-| `/health` | `ok`, penanda port ini milik server |
-| `/poll?sid=` | `<id>|<kode lua>` atau `none` |
-| `/result` | hasil dari game (POST), ada jalur cadangan lewat GET |
-| `/ack` | konfirmasi perintah diterima |
-| `/diag?msg=` | pesan debug dari dalam game, ikut masuk log |
-| `/hello?sid=` | pendaftaran instance |
-| `/status` / `/enqueue` | dipakai mode attached |
-| `/call?tool=&args=` | kontrol manual tanpa klien MCP |
+| `/health` | `ok`, marks this port as owned by the server |
+| `/poll?sid=` | `<id>|<lua code>` or `none` |
+| `/result` | result from the game (POST), with a GET fallback |
+| `/ack` | confirms a command was taken |
+| `/diag?msg=` | debug message from inside the game, written to the log |
+| `/hello?sid=` | instance registration |
+| `/status` / `/enqueue` | used by attached mode |
+| `/call?tool=&args=` | manual control without an MCP client |
 
-Bentuk balasan `MakeRequest` di build ini: `status = 0` (bukan 200) dan `error = false`
-saat sukses. Patokan yang benar adalah `error` dan `content`, bukan status. Hasil dari Lua
-diserialisasi `enc()` (kedalaman 5, 120 entri per tabel), jadi string kembali ter-escape
-dan server membuka escape itu sebelum membaca isinya.
+`MakeRequest` in this build returns `status = 0` (not 200) with `error = false` on
+success, so judge by `error` and `content`, never by status. Lua results are serialised by
+`enc()` (depth 5, 120 entries per table), which means strings come back escaped and the
+server unescapes them before parsing.
 
-### Instance ganda
+### Multiple instances
 
-Setiap `Execute` meninggalkan thread yang tetap polling. `bridge.lua` mengirim
-`/hello?sid=<acak>` saat mulai. Server hanya melayani satu sid, tapi giliran itu kedaluwarsa
-(`ACTIVE_TTL` 20 detik di `_Bridge.claim()`): kalau pemegangnya sudah sunyi, instance baru
-mengambil alih. Tanpa batas waktu, sid basi membuat instance baru dijawab `none` selamanya.
+Every `Execute` leaves a thread polling forever. `bridge.lua` sends `/hello?sid=<random>`
+on start. The server serves one sid at a time, but that turn expires (`ACTIVE_TTL`, 20
+seconds, in `_Bridge.claim()`): once the holder goes quiet a new instance takes over.
+Without the expiry a stale sid makes every new instance answer `none` forever.
 
-Pengiriman ulang (`reap`) hanya terjadi kalau instance penerima sudah digantikan sid lain,
-bukan karena hasilnya lambat. Perintah yang pemanggilnya sudah menyerah (TIMEOUT) dibuang
-dari antrean, jadi tidak dieksekusi belakangan.
+Re-sending (`reap`) happens only when the instance that took a command was replaced, not
+because the result is slow. Commands whose caller already gave up (TIMEOUT) are dropped
+from the queue, so they never run later.
 
-## Gerak, chat, dan level
+## Movement, chat, and level
 
-Gerak tidak bisa lewat paket. `SendPacketRaw(false, {type=0, x=.., y=..})` diterima tanpa
-error tapi tidak berefek karena klien mengirim ulang posisinya sendiri tiap ~200 ms. Yang
-bekerja: `FindPath` (jalur cepat bawaan game) lewat tool `go_to`, atau press-and-hold
-tombol panah lewat `swipe`.
+Movement cannot go through packets. `SendPacketRaw(false, {type=0, x=.., y=..})` is
+accepted without error but does nothing, because the client resends its own position
+every ~200 ms. What works: `FindPath` (the game's own fast walk) through `go_to`, or
+press-and-hold on the arrow buttons through `swipe`.
 
-    panah kanan x=289 y=606, panah kiri x=117 y=606
-    swipe x y x y <ms>  ->  sekitar 500 px/s, 1 petak = 32 px
+    right arrow x=289 y=606, left arrow x=117 y=606
+    swipe x y x y <ms>  ->  about 500 px/s, 1 tile = 32 px
 
-Chat dan emote lewat paket teks, newline harus karakter asli (`string.char(10)`):
+Chat and emotes use text packets, and the newline must be a real character
+(`string.char(10)`):
 
 ```lua
 local nl = string.char(10)
-pcall(SendPacket, 2, 'action|input' .. nl .. 'text|halo')
+pcall(SendPacket, 2, 'action|input' .. nl .. 'text|hello')
 pcall(SendPacket, 2, 'action|input' .. nl .. 'text|/dab')
 ```
 
-`level` tidak diekspos API. `GetLocal()` hanya memuat `name, netid, userid, country, pos,
-clothing, invisible, isleft, mstate, smstate`, dan `GetPlayerInfo()` hanya `gems`. Angka
-level hanya muncul di dialog profil (`action|wrench`).
+Level is not exposed by the API. `GetLocal()` only carries `name, netid, userid, country,
+pos, clothing, invisible, isleft, mstate, smstate`, and `GetPlayerInfo()` only `gems`. The
+level number only appears in the profile dialog (`action|wrench`).
 
-## Jebakan yang sudah memakan waktu
+## Traps that already cost time
 
-1. **Daftar API belum dicentang** di setting executor. Gejalanya konsol mod diam di
-   `aktif, menunggu perintah` dan server tidak melihat koneksi apa pun.
-2. **`adb reverse` hilang** setiap transport adb putus. Gejalanya nol baris `POLL` di log
-   server, sementara `/diag` dari perangkat tetap masuk. Perbaiki dengan
-   `adb reverse tcp:8770 tcp:8770` atau `bridge_doctor(auto_fix=True)`.
-3. **Sid basi memegang giliran.** Gejalanya `polling: false`, `/diag` masuk berulang dengan
-   `peek=none`, dan log tanpa baris `POLL`. Sekarang ditangani `ACTIVE_TTL`.
-4. **Label hook harus angka.** `AddHook('OnSendPacketRaw', 'label_string', cb)` tidak
-   meregistrasi apa pun, dan percobaan label string bisa mematikan hook yang sudah ada
-   sampai game dijalankan ulang.
-5. **Template Lua yang memakai `.format()`** butuh `{{}}` untuk kurung literal. Template
-   yang tidak di-`.format()` justru tidak boleh punya `{{}}`, karena Lua membacanya sebagai
-   tabel berisi tabel kosong.
-6. **Hook tidak melihat paket yang kita kirim sendiri.** `SendPacket`/`SendPacketRaw` dari
-   Lua tidak muncul di capturer. Verifikasi injeksi lewat perubahan state
-   (`GetTile`, `GetInventory`, `GetObjectList`), bukan lewat capturer.
+1. **The API list is not ticked** in the executor settings. The mod console then sits at
+   `active, waiting for commands` and the server sees no connection at all.
+2. **`adb reverse` disappears** every time the adb transport drops. The symptom is zero
+   `POLL` lines in the server log while `/diag` from the device still arrives. Fix it with
+   `adb reverse tcp:8770 tcp:8770` or `bridge_doctor(auto_fix=True)`.
+3. **A stale sid holds the turn.** The symptom is `polling: false`, `/diag` repeating with
+   `peek=none`, and a log with no `POLL` lines. `ACTIVE_TTL` now handles it.
+4. **Hook labels must be numbers.** `AddHook('OnSendPacketRaw', 'string_label', cb)`
+   registers nothing, and a failed string-label attempt can kill existing hooks until the
+   game restarts.
+5. **Lua templates that use `.format()`** need `{{}}` for a literal brace. Templates that
+   do not use `.format()` must not contain `{{}}`, because Lua reads that as a table
+   holding an empty table.
+6. **Hooks do not see packets we send ourselves.** `SendPacket` and `SendPacketRaw` from
+   Lua never show up in the capturer. Verify injection through state changes (`GetTile`,
+   `GetInventory`, `GetObjectList`), not through the capturer.
 
-## Tes
+## Tests
 
-    .venv/bin/python -m unittest tests_gt.py     # 33 tes, tanpa perangkat
-    .venv/bin/python test_bridge_lua.py          # harness bridge.lua dengan stub MakeRequest
-    .venv/bin/python test_server.py              # smoke test stdio (butuh perangkat)
+    .venv/bin/python -m unittest tests_gt.py     # 33 tests, no device needed
+    .venv/bin/python test_bridge_lua.py          # bridge.lua harness with a stubbed MakeRequest
+    .venv/bin/python test_server.py              # stdio smoke test (needs a device)
 
-`tests_gt.py` menguji reap tanpa duplikasi, pembuangan perintah basi, mode attached,
-escaping `type_text`, BFS pathfinding, pengambilalihan sid, dan template Lua
-(`collect_objects`, `drop_item`, `list_objects`) yang dikompilasi dengan `lupa` sebelum
-dikirim ke game.
+`tests_gt.py` covers reap without duplication, dropping stale commands, attached mode,
+`type_text` escaping, BFS pathfinding, sid takeover, and the Lua templates
+(`collect_objects`, `drop_item`, `list_objects`) compiled with `lupa` before they reach the
+game.
 
-## Struktur
+## Layout
 
-    server.py           MCP server + kontrol HTTP
-    bridge.lua          skrip in-game: polling, eksekusi, serialisasi, capturer
-    tests_gt.py         tes regresi tanpa perangkat
-    test_bridge_lua.py  harness bridge.lua
-    test_server.py      smoke test stdio
-    pngio.py            pemotong PNG untuk screenshot_crop
-    experiments/        skrip percobaan, tiap berkas menyebut hasilnya
-    docs/               dokumentasi API Bothax dan catatan klien
+    server.py           MCP server + HTTP control
+    bridge.lua          in-game script: polling, execution, serialisation, capturer
+    tests_gt.py         regression tests, no device
+    test_bridge_lua.py  bridge.lua harness
+    test_server.py      stdio smoke test
+    pngio.py            PNG cropper used by screenshot_crop
+    experiments/        probe scripts, each file states its result
+    docs/               Bothax API reference and client notes
 
-## Batasan
+## Limits
 
-- **Butuh executor.** Kalau menu BINTERNAL masih terkunci, `bridge.lua` tidak bisa jalan
-  dan seluruh jalur Lua mati. Jalur ADB tetap tersedia.
-- **Game harus di foreground.** Proses latar dibekukan Android, polling ikut berhenti.
-- **ADB harus tetap tersambung.** Nirkabel lebih rawan putus daripada USB, dan setiap
-  putus menghapus `adb reverse`.
-- **Satu perangkat, satu instance aktif.** Tidak ada isolasi multi-akun.
-- **Risiko akun milik pemakai.** Otomasi di server resmi bisa berujung sanksi. Alat ini
-  tidak memuat penghindaran deteksi, dan tidak dimaksudkan untuk itu.
+- **The executor is required.** If the BINTERNAL menu is still locked, `bridge.lua` cannot
+  run and the whole Lua path is dead. ADB tools still work.
+- **The game must be in the foreground.** Android freezes background processes and polling
+  stops with them.
+- **ADB must stay connected.** Wireless is flakier than USB, and every drop removes
+  `adb reverse`.
+- **One device, one active instance.** There is no multi-account isolation.
+- **Account risk belongs to the user.** Automation on the official server can end in a
+  sanction. This tool ships no detection evasion and is not meant for that.

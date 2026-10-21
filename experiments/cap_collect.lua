@@ -1,5 +1,5 @@
--- Percobaan menangkap paket collect lewat 4 hook.
--- Hasil: 0 event, hook OnSendPacketRaw sudah mati di sesi itu.
+-- Attempt to capture the collect packet through four hooks.
+-- Result: 0 events, the OnSendPacketRaw hook was already dead that session.
 _PKT4 = {}
 local function fg()
   local t = GetTile(72, 24)

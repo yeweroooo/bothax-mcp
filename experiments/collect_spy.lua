@@ -1,5 +1,5 @@
--- Spy paket dua arah untuk memburu paket "collect".
--- Jalankan sekali dari executor; berhenti sendiri setelah 120 detik.
+-- Two-way packet spy, used to hunt the "collect" packet.
+-- Run once from the executor; it stops itself after 120 seconds.
 -- Output: /sdcard/Android/media/com.rtsoft.growtopia/spy_<epoch>.txt
 local DIR = '/sdcard/Android/media/com.rtsoft.growtopia/'
 local path = DIR .. 'spy_' .. tostring(os.time()) .. '.txt'

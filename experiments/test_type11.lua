@@ -1,5 +1,5 @@
--- Uji drop lalu pungut paket type=11 dengan oid objek.
--- Hasil: objek hilang, inventory kembali utuh.
+-- Drop, then pick up with a type=11 packet carrying the object oid.
+-- Result: object gone from the ground, inventory back to its old size.
 local id = (type(DROP_ID) == 'number') and DROP_ID or 5026
 
 local function inv(i)

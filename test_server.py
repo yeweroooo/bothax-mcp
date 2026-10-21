@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Uji sisi server tanpa game:
- 1. kanal bridge: submit -> klien palsu polling -> POST hasil -> terima hasil
+Server-side test without the game:
+ 1. bridge channel: submit -> fake polling client -> POST result -> result received
  2. MCP stdio: spawn server.py, list tools, panggil device_info (ADB nyata)
 """
 import asyncio
@@ -12,8 +12,8 @@ import threading
 import time
 import urllib.request
 
-# Port sendiri: kalau 8770 dipegang server lain, tes masuk mode attached dan
-# hasilnya datang dari game sungguhan, bukan dari klien palsu di bawah.
+# Own port: if another server holds 8770 the test falls into attached mode and the
+# result comes from a real game instead of the fake client below.
 os.environ["GT_BRIDGE_PORT"] = "8771"
 
 import server as srv  # noqa: E402  (port harus diset sebelum modul diimpor)
@@ -34,7 +34,7 @@ def test_bridge_channel():
             if payload != "none":
                 body = payload
                 break
-        assert body, "tidak menerima perintah"
+        assert body, "no command received"
         cmd_id, code = body.split("|", 1)
         got["code"] = code
         result = f'{cmd_id}|ok|{{name="BridgeTest"}}'.encode()
@@ -47,10 +47,10 @@ def test_bridge_channel():
     t.start()
     out = srv.BRIDGE.submit("return GetLocal()", 8)
     t.join(5)
-    print("  kode terkirim :", got.get("code"))
-    print("  hasil diterima:", out)
+    print("  code sent     :", got.get("code"))
+    print("  result received:", out)
     assert out == '{name="BridgeTest"}', out
-    print("  [OK] kanal bridge dua arah")
+    print("  [OK] two-way bridge channel")
 
 
 async def test_mcp_stdio():
@@ -71,7 +71,7 @@ async def test_mcp_stdio():
             res = await session.call_tool("device_info", {})
             text = res.content[0].text
             if text.startswith("ERROR"):
-                print("  device_info:", text, "(perangkat tidak terhubung, jalur ADB tidak diuji)")
+                print("  device_info:", text, "(no device attached, so the ADB path is untested)")
             else:
                 data = json.loads(text)
                 print("  device_info:", json.dumps({k: data[k] for k in ("model", "android", "game_running") if k in data}))
@@ -79,8 +79,8 @@ async def test_mcp_stdio():
 
 
 if __name__ == "__main__":
-    print("1) kanal bridge")
+    print("1) bridge channel")
     test_bridge_channel()
     print("2) MCP stdio")
     asyncio.run(test_mcp_stdio())
-    print("\nSEMUA UJI LULUS")
+    print("\nALL TESTS PASSED")

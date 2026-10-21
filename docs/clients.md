@@ -1,18 +1,18 @@
-# Memakai bothax-mcp dari klien MCP lain
+# Using bothax-mcp from other MCP clients
 
-Server ini bicara MCP stdio biasa, jadi klien apa pun yang mendukung stdio bisa memakainya.
+The server speaks plain stdio MCP, so any client that supports stdio can run it.
 
-Nilai yang perlu diisi di semua klien:
+Values every client needs:
 
 - command: `<repo>/.venv/bin/python` (Windows: `<repo>\.venv\Scripts\python.exe`)
 - args: `["<repo>/server.py"]`
-- env: `GT_BRIDGE_PORT` (default 8770), dan `PATH` harus memuat folder `platform-tools`
+- env: `GT_BRIDGE_PORT` (default 8770), and `PATH` must include the `platform-tools` folder
 
-Satu server menulis ke satu port bridge. Kalau port itu sudah dipegang proses lain,
-instance kedua masuk mode `attached` dan meneruskan perintah lewat `/enqueue`.
+One server writes to one bridge port. If another process already holds that port, the
+second instance starts in `attached` mode and forwards commands through `/enqueue`.
 
-Nama kunci config berbeda antar klien dan bisa berubah antar versi. Kalau potongan di
-bawah ditolak, cek `--help` klien tersebut; isinya tetap sama: command, args, env.
+Config keys differ between clients and change between versions. If a snippet below is
+rejected, check that client's `--help`; the shape stays the same: command, args, env.
 
 ## Claude Code
 
@@ -106,14 +106,14 @@ mcp_servers:
     enabled: true
 ```
 
-## Catatan lintas klien
+## Notes across clients
 
-- **Tool gambar**: `screenshot`, `screenshot_crop`, dan `panel_crop` mengembalikan content
-  `image` (PNG base64). Klien yang tidak menampilkan content gambar tetap bisa memanggilnya,
-  tapi hanya melihat metadata.
-- **Dua klien, satu port**: keduanya berbagi antrean perintah. Satu proses jadi pemilik,
-  yang lain menumpang.
-- **Windows**: taruh `adb.exe` di `PATH` atau set `ANDROID_SDK_ROOT`. Path sementara memakai
-  `tempfile.gettempdir()`, bukan `/tmp`.
-- **macOS**: `brew install android-platform-tools`, atau set `ANDROID_SDK_ROOT` ke SDK
-  Android Studio.
+- **Image tools**: `screenshot`, `screenshot_crop`, and `panel_crop` return `image`
+  content (base64 PNG). A client that cannot render images can still call them, but it
+  only sees the metadata.
+- **Two clients, one port**: they share the command queue. One process owns the port and
+  the other rides along.
+- **Windows**: put `adb.exe` on `PATH` or set `ANDROID_SDK_ROOT`. Temp files use
+  `tempfile.gettempdir()`, not `/tmp`.
+- **macOS**: `brew install android-platform-tools`, or point `ANDROID_SDK_ROOT` at the
+  Android Studio SDK.

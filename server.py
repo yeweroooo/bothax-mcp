@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""bothax-mcp: MCP server yang mengendalikan Growtopia + panel BINTERNAL.
+"""bothax-mcp: MCP server that drives Growtopia through ADB and an in-game Lua bridge.
 
-Dua jalur kontrol:
-  1. ADB   : tap, swipe, screenshot, launch, logcat, push script.
-  2. BRIDGE: perintah Lua dieksekusi di dalam proses game lewat bridge.lua
-             yang polling HTTP (MakeRequest) ke 127.0.0.1, dihubungkan
-             dengan `adb reverse tcp:PORT tcp:PORT`.
+Two control paths:
+  1. ADB: tap, swipe, screenshot, launch, logcat, push scripts.
+  2. BRIDGE: Lua runs inside the game process; bridge.lua polls HTTP on 127.0.0.1,
+     reached through 'adb reverse tcp:PORT tcp:PORT'.
 
-Jalankan: python server.py            (stdio, untuk klien MCP)
-"""
+Run: python server.py (stdio, for MCP clients)."""
 
 from __future__ import annotations
 
@@ -32,10 +30,7 @@ from pathlib import Path
 from mcp.server.mcpserver import Image, MCPServer
 
 def _find_adb() -> str:
-    """Cari adb di Linux/macOS/Windows tanpa jalur yang di-hardcode.
-
-    Urutan: PATH -> ANDROID_SERIAL? tidak -> SDK env -> lokasi bawaan per OS.
-    """
+    """Locate adb: PATH, then ANDROID_SDK_ROOT/ANDROID_HOME, then the per-OS default."""
     found = shutil.which("adb")
     if found:
         return found
@@ -62,12 +57,12 @@ def _find_adb() -> str:
     for cand in guesses:
         if cand.exists():
             return str(cand)
-    return "adb"  # biarkan error-nya muncul saat dipakai, dengan pesan jelas
+    return "adb"  # let the missing binary surface when adb is actually used
 
 
 TMP_DIR = Path(tempfile.gettempdir())
-# Path log bisa ditentukan sendiri lewat GT_LOG_PATH; default mengikuti TMPDIR
-# (di sebagian setup TMPDIR bukan /tmp, jadi jangan diasumsikan).
+# GT_LOG_PATH overrides this; the default follows TMPDIR.
+# (some setups do not use /tmp, so never assume it).
 LOG_PATH = Path(os.environ.get("GT_LOG_PATH") or (TMP_DIR / "bridge_http.log"))
 
 ADB = _find_adb()
@@ -76,19 +71,14 @@ ACTIVITY = "com.rtsoft.growtopia/.Main"
 SCRIPT_DIR = f"/sdcard/Android/media/{PACKAGE}/scripts"
 BRIDGE_PORT = int(os.environ.get("GT_BRIDGE_PORT", "8770"))
 POLL_WAIT = 1.0          # detik long-poll
-ACTIVE_TTL = 20.0        # sid pemegang giliran dianggap mati setelah sunyi ini
-RESULT_TIMEOUT = 12.0     # default tunggu hasil eval
+ACTIVE_TTL = 20.0        # holder sid is considered dead after this much silence
+RESULT_TIMEOUT = 12.0     # default wait for one eval result
 
 mcp = MCPServer("bothax-mcp")
 
 
 def _safe(fn):
-    """Jangan biarkan satu kegagalan adb membuat seluruh tool call meledak.
-
-    Tanpa ini, `adb` yang timeout (device offline) naik sebagai traceback
-    UnexpectedToolError dan klien hanya melihat "Error executing tool" tanpa
-    penyebab yang bisa ditindaklanjuti.
-    """
+    """Return any exception as an 'ERROR: ...' string, so one bad call cannot kill the session."""
 
     @functools.wraps(fn)
     def wrapper(*a, **kw):
@@ -101,18 +91,17 @@ def _safe(fn):
 
 
 def adb(*args: str, timeout: int = 20, check: bool = False) -> subprocess.CompletedProcess:
-    """Panggil adb. Timeout pendek: adb bisa menggantung menit-menitan kalau
-    ada transport offline (device wireless mati), dan itu membekukan tool MCP."""
+    """Run adb with a short timeout; a dead wireless transport can hang for minutes."""
     cmd = [ADB, *args]
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         raise RuntimeError(
             f"adb {' '.join(args[:2])} timeout {timeout}s "
-            f"(device offline? cek `adb devices`, atau `adb kill-server`)"
+            f"(device offline? check `adb devices`, or `adb kill-server`)"
         ) from None
     if check and p.returncode != 0:
-        raise RuntimeError(f"adb {' '.join(args)} gagal: {p.stderr.strip() or p.stdout.strip()}")
+        raise RuntimeError(f"adb {' '.join(args)} failed: {p.stderr.strip() or p.stdout.strip()}")
     return p
 
 
@@ -126,7 +115,7 @@ def device_serial() -> str:
         parts = line.split()
         if len(parts) >= 2 and parts[1] == "device":
             return parts[0]
-    raise RuntimeError("tidak ada perangkat ADB yang terhubung")
+    raise RuntimeError("no ADB device connected")
 
 
 def game_pid() -> int | None:
@@ -135,12 +124,12 @@ def game_pid() -> int | None:
 
 
 def _tmp_png(prefix: str) -> str:
-    """Path sementara lintas OS (bukan /tmp hardcode) + resolusi milidetik."""
+    """Temp PNG path that honours TMPDIR instead of assuming /tmp."""
     return str(TMP_DIR / f"{prefix}_{int(time.time() * 1000)}.png")
 
 
 def _screencap(dest: str) -> str:
-    """Screenshot ke `dest`; raise RuntimeError dengan pesan yang bisa dibaca."""
+    """Capture the screen as PNG bytes."""
     try:
         p = subprocess.run(
             [ADB, "exec-out", "screencap", "-p"], capture_output=True, timeout=60
@@ -148,7 +137,7 @@ def _screencap(dest: str) -> str:
     except subprocess.TimeoutExpired:
         raise RuntimeError("screencap timeout 60s (device offline?)") from None
     if p.returncode != 0 or not p.stdout:
-        raise RuntimeError(f"screencap gagal: {p.stderr.decode(errors='replace')[:200].strip()}")
+        raise RuntimeError(f"screencap failed: {p.stderr.decode(errors='replace')[:200].strip()}")
     Path(dest).write_bytes(p.stdout)
     return dest
 
@@ -159,11 +148,7 @@ _LUA_ESCAPES = {"\\": "\\", '"': '"', "n": "\n", "r": "\r", "t": "\t"}
 
 
 def _unescape_lua(s: str) -> str:
-    """Kebalikan enc() di bridge.lua (\\, \\n, \\" ) dalam satu lintasan.
-
-    Penggantian berurutan gaya lama (`\\\\"` lalu `\\\\\\\\`) merusak urutan
-    campuran seperti `\\\\\\"` (backslash diikuti kutip ter-escape).
-    """
+    """Undo enc() escaping from bridge.lua before parsing a result."""
     s = s.strip()
     if len(s) >= 2 and s[0] == '"' and s[-1] == '"':
         s = s[1:-1]
@@ -181,19 +166,19 @@ def _unescape_lua(s: str) -> str:
 
 
 def _input_text_payload(text: str) -> str:
-    """Teks untuk `input text`: spasi jadi %s, sisanya apa adanya."""
+    """Percent-encode spaces for 'input text'."""
     if any(ord(c) > 127 for c in text):
         raise ValueError(
-            "teks berisi karakter non-ASCII; `input text` hanya menerima ASCII "
-            "(pakai ADBKeyboard, atau kirim teks lewat bridge)"
+            "text contains non-ASCII characters; `input text` only accepts ASCII "
+            "(use ADBKeyboard, or send text through the bridge)"
         )
     if "\n" in text or "\r" in text:
-        raise ValueError("baris baru tidak didukung; kirim key KEYCODE_ENTER terpisah")
+        raise ValueError("newlines are not supported; send KEYCODE_ENTER separately")
     return text.replace(" ", "%s")
 
 
 def _sh_single_quote(s: str) -> str:
-    """Kutip untuk sh di perangkat: aman untuk & ; | $ ( ) ` * ? dan kutip."""
+    """Quote for the device shell without losing quotes or metacharacters."""
     return "'" + s.replace("'", "'\\''") + "'"
 
 
@@ -202,13 +187,7 @@ def _input_text_command(text: str) -> str:
 
 
 class _Bridge:
-    """Antrean perintah untuk sisi Lua + tempat hasilnya mendarat.
-
-    Protokol (plain text, tanpa JSON di sisi Lua):
-      bridge GET  /poll?sid=<id>  -> "<cmd_id>|<lua code>"  atau "none"
-      bridge POST /result         -> body: "<cmd_id>|<ok|err>|<teks hasil>"
-      server GET  /health         -> "ok"
-    """
+    """Command queue and result store shared by the tools and the HTTP endpoints."""
 
     def __init__(self) -> None:
         self.cmds: queue.Queue[tuple[str, str]] = queue.Queue()
@@ -220,8 +199,7 @@ class _Bridge:
         self.sid: str | None = None
         self.active: str | None = None
         self.last_diag: dict | None = None
-        # perintah yang sudah ditinggalkan pemanggilnya (timeout): jangan
-        # dieksekusi terlambat saat bridge baru muncul belakangan.
+        # A command its caller gave up on must not run later, when a new bridge appears.
         self.cancelled: set[str] = set()
 
     def submit(self, code: str, timeout: float) -> str:
@@ -239,9 +217,9 @@ class _Bridge:
             if not ev.is_set():
                 self.cancelled.add(cmd_id)
         if not ev.is_set():
-            return f"TIMEOUT: tidak ada hasil dalam {timeout:.0f}s (bridge tidak polling?)"
+            return f"TIMEOUT: no result within {timeout:.0f}s (is the bridge polling?)"
         if box["status"] == "ok":
-            return box["text"] or "(kosong)"
+            return box["text"] or "(empty)"
         return f"ERROR: {box['text']}"
 
     def deliver(self, cmd_id: str, status: str, text: str) -> None:
@@ -256,7 +234,7 @@ class _Bridge:
                 box["event"].set()
 
     def deliver_latest(self, status: str, text: str) -> None:
-        """Untuk klien yang tidak mengirim id: layani perintah terbaru."""
+        """Deliver to the newest pending command, for clients that send no id."""
         with self.lock:
             if not self.pending:
                 self.last_result = time.time()
@@ -265,27 +243,24 @@ class _Bridge:
         self.deliver(cid, status, text)
 
     def claim(self, sid: str) -> bool:
-        """True bila instance ini boleh menerima perintah.
+        """True when this instance may receive commands.
 
-        Instance yang sudah aktif diprioritaskan selama masih mem-poll, supaya
-        skrip lama yang masih hidup tidak dicampuri. Tapi giliran itu harus
-        kedaluwarsa: tanpa TTL, sid basi (game di-restart / skrip dijalankan
-        ulang) membuat instance baru dijawab 'none' selamanya: poll tampak
-        jalan, perintah tidak pernah sampai.
-        """
+        The active instance keeps its turn while it keeps polling, but the turn expires after
+        ACTIVE_TTL. Without that expiry a stale sid answers 'none' to every new instance, so
+        polling looks healthy while no command ever arrives."""
         now = time.time()
         if not sid:
             return True
         if not self.active:
             self.active, self.sid = sid, sid
-            _trace(f"instance aktif: {sid}")
+            _trace(f"active instance: {sid}")
             return True
         if sid == self.active:
             return True
         if now - self.last_poll < ACTIVE_TTL:
             return False
         self.active, self.sid = sid, sid
-        _trace(f"instance aktif (ambil alih, sunyi {now - self.last_poll:.0f}s): {sid}")
+        _trace(f"active instance taken over after {now - self.last_poll:.0f}s of silence: {sid}")
         return True
 
     def next_cmd(self) -> tuple[str, str] | None:
@@ -296,7 +271,7 @@ class _Bridge:
                 return None
             with self.lock:
                 if cmd[0] in self.cancelled:
-                    # pemanggil sudah menyerah (TIMEOUT): buang, jangan eksekusi
+                    # Caller already timed out: drop it instead of running it.
                     self.cancelled.discard(cmd[0])
                     continue
                 self.last_poll = time.time()
@@ -304,21 +279,17 @@ class _Bridge:
                     "code": cmd[1],
                     "ts": time.time(),
                     "tries": 1,
-                    # instance yang menerima perintah ini: dasar keputusan reap()
+                    # Instance that took this command; reap() compares it later.
                     "sid": self.active,
                 }
             return cmd
 
     def reap(self, retry_after: float = 6.0, max_tries: int = 3) -> None:
-        """Kirim ulang perintah yang JELAS hilang, bukan yang masih dikerjakan.
+        """Re-send commands that are clearly lost, never ones still running.
 
-        Aturan lama (kirim ulang setelah retry_after tanpa hasil) mengeksekusi
-        perintah dua kali setiap kali Lua butuh >6 detik, mis. `Sleep(8000)`
-        atau loop berat. Sekarang perintah hanya dikirim ulang kalau instance
-        yang menerimanya sudah digantikan instance lain (/hello dengan sid
-        baru, biasanya karena game restart): hanya saat itu perintah benar-benar
-        tidak akan pernah dijawab.
-        """
+        A command is re-queued only when the instance that took it was replaced, which means it
+        will never be answered. The old rule (re-send after retry_after) executed every slow
+        command twice, for example Sleep(8000)."""
         now = time.time()
         requeue: list[tuple[str, str]] = []
         with self.lock:
@@ -344,8 +315,7 @@ class _Bridge:
 
     def status(self) -> dict:
         if BRIDGE_MODE == "attached":
-            # Antrean lokal kosong dan menyesatkan: yang memegang klien adalah
-            # instance pemilik port, jadi laporkan statusnya.
+            # A local queue would be empty and misleading: report the port owner instead.
             try:
                 with urllib.request.urlopen(
                     f"http://127.0.0.1:{BRIDGE_PORT}/status", timeout=3
@@ -359,7 +329,7 @@ class _Bridge:
                     "mode": "attached",
                     "port": BRIDGE_PORT,
                     "owner_port": BRIDGE_PORT,
-                    "error": f"pemilik port tidak menjawab: {e}",
+                    "error": f"port owner did not answer: {e}",
                 }
         now = time.time()
         with self.lock:
@@ -378,17 +348,16 @@ class _Bridge:
 
 BRIDGE = _Bridge()
 
-# "owner"    : proses ini yang memegang port bridge (perilaku normal)
-# "attached" : port sudah dipegang instance bothax-mcp lain (mis. sisa
-#              `server.py --http-only`), jadi perintah dikirim ke sana lewat
-#              /enqueue. Tanpa ini proses MCP mati total hanya karena port
-#              bentrok, dan seluruh tool ADB ikut hilang.
+# "owner"    : this process holds the bridge port (normal case)
+# "attached" : another bothax-mcp instance already holds it, for example a
+#              leftover `server.py --http-only`, so commands go there through
+#              /enqueue. Without this the MCP client would die on a busy port
+#              and take every ADB tool down with it.
 BRIDGE_MODE = "owner"
 
 
-
 def _submit_remote(code: str, timeout: float) -> str:
-    """Kirim perintah ke instance bothax-mcp yang memegang port bridge."""
+    """Forward a command to the instance that owns the bridge port."""
     payload = json.dumps({"code": code, "timeout": timeout}).encode()
     req = urllib.request.Request(
         f"http://127.0.0.1:{BRIDGE_PORT}/enqueue",
@@ -400,11 +369,11 @@ def _submit_remote(code: str, timeout: float) -> str:
         with urllib.request.urlopen(req, timeout=timeout + 8) as r:
             return r.read().decode("utf-8", "replace")
     except Exception as e:  # noqa: BLE001
-        return f"ERROR: instance bridge pemilik port tidak menjawab: {e}"
+        return f"ERROR: bridge instance owning the port did not answer: {e}"
 
 
 def _bridge_alive(timeout: float = 1.5) -> bool:
-    """True kalau port bridge dipegang instance bothax-mcp (punya /health -> ok)."""
+    """True when the port answers /health, meaning another bothax-mcp owns it."""
     try:
         with urllib.request.urlopen(
             f"http://127.0.0.1:{BRIDGE_PORT}/health", timeout=timeout
@@ -415,7 +384,7 @@ def _bridge_alive(timeout: float = 1.5) -> bool:
 
 
 def _trace(msg: str) -> None:
-    """Catat lalu lintas HTTP bridge ke file agar bisa diaudit."""
+    """Append a line to the bridge log. Best effort, never raises."""
     try:
         with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
@@ -437,7 +406,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def do_GET(self):  # noqa: N802 (nama wajib dari BaseHTTPRequestHandler)
+    def do_GET(self):  # noqa: N802 (name required by BaseHTTPRequestHandler)
         if self.path.startswith("/health"):
             return self._send("ok")
         if self.path.startswith("/status"):
@@ -449,19 +418,18 @@ class _Handler(BaseHTTPRequestHandler):
                 BRIDGE.sid = new_sid
                 BRIDGE.active = new_sid
                 BRIDGE.last_poll = time.time()
-                _trace(f"HELLO instance aktif: {new_sid}")
+                _trace(f"HELLO active instance: {new_sid}")
             return self._send("ok")
         if self.path.startswith("/poll"):
             sid = (urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("sid") or [""])[0]
             if not BRIDGE.claim(sid):
-                # instance lama masih memegang giliran: jangan beri perintah,
-                # cukup jawab "none" (dan jangan update last_poll-nya)
+                # Old instance still holds the turn: answer none and leave last_poll alone.
                 return self._send("none")
             deadline = time.time() + POLL_WAIT
             while time.time() < deadline:
                 cmd = BRIDGE.next_cmd()
                 if cmd:
-                    _trace(f"POLL -> kirim {cmd[0]} ({len(cmd[1])} B) sid={sid or '-'}")
+                    _trace(f"POLL -> send {cmd[0]} ({len(cmd[1])} B) sid={sid or '-'}")
                     return self._send(f"{cmd[0]}|{cmd[1]}")
                 time.sleep(0.15)
             BRIDGE.last_poll = time.time()
@@ -478,7 +446,7 @@ class _Handler(BaseHTTPRequestHandler):
             _trace(f"ACK sid={(p.get('sid') or ['?'])[0]} id={(p.get('id') or ['?'])[0]} len={(p.get('len') or ['?'])[0]}")
             return self._send("ok")
         if self.path.startswith("/result"):
-            # Jalur cadangan: hasil dikirim lewat GET query kalau POST gagal.
+            # Fallback: the game can post results as a GET query when POST fails.
             q = urllib.parse.urlparse(self.path).query
             p = urllib.parse.parse_qs(q)
             cid = (p.get("id") or [""])[0]
@@ -488,17 +456,17 @@ class _Handler(BaseHTTPRequestHandler):
                 _trace(f"RESULT-GET {cid} {st} ({len(data)} B)")
                 BRIDGE.deliver(cid, st, data)
                 return self._send("ok", 200)
-            _trace("RESULT-GET tanpa id")
+            _trace("RESULT-GET without id")
             return self._send("bad query", 400)
         if self.path.startswith("/call"):
-            # Kontrol lokal tanpa klien MCP: /call?tool=game_snapshot&args=<json>
+            # Manual control without an MCP client: /call?tool=...&args=<json>
             from urllib.parse import parse_qs, urlparse
 
             q = parse_qs(urlparse(self.path).query)
             name = (q.get("tool") or [""])[0]
             fn = CONTROL_TOOLS.get(name)
             if not fn:
-                return self._send("tool tidak dikenal: " + name, 404)
+                return self._send("unknown tool: " + name, 404)
             try:
                 kwargs = json.loads((q.get("args") or ["{}"])[0])
                 return self._send(str(fn(**kwargs)))
@@ -527,8 +495,8 @@ class _Handler(BaseHTTPRequestHandler):
                 BRIDGE.deliver(parts[0], parts[1], parts[2])
                 return self._send("ok")
             if len(parts) == 2:
-                # klien lama/tanpa id: serahkan ke perintah yang masih menunggu
-                _trace(f"RESULT-TANPA-ID {parts[0]} ({len(parts[1])} B)")
+                # Legacy client without an id: hand it to whatever is still pending.
+                _trace(f"RESULT-NO-ID {parts[0]} ({len(parts[1])} B)")
                 BRIDGE.deliver_latest(parts[0], parts[1])
                 return self._send("ok")
             _trace(f"RESULT-RUSAK: {raw[:60]!r}")
@@ -541,20 +509,19 @@ def start_bridge_server() -> int:
     try:
         srv = ThreadingHTTPServer(("127.0.0.1", BRIDGE_PORT), _Handler)
     except OSError as e:
-        # Port sudah dipakai. Kalau pemiliknya instance bothax-mcp (punya /health),
-        # jangan mati: mode attached supaya tool MCP tetap tersedia.
+        # Port taken. If the owner is another bothax-mcp, stay alive in attached mode.
         if _bridge_alive():
             BRIDGE_MODE = "attached"
             print(
-                f"[bothax-mcp] port {BRIDGE_PORT} dipegang instance bothax-mcp lain; "
-                f"mode attached (perintah Lua diteruskan ke sana)",
+                f"[bothax-mcp] port {BRIDGE_PORT} is held by another bothax-mcp instance; "
+                f"attached mode (Lua commands are forwarded there)",
                 file=sys.stderr,
                 flush=True,
             )
             return BRIDGE_PORT
         raise RuntimeError(
-            f"port {BRIDGE_PORT} dipakai proses lain yang bukan bothax-mcp: {e}. "
-            f"Cek `ss -ltnp | grep {BRIDGE_PORT}`, atau set GT_BRIDGE_PORT."
+            f"port {BRIDGE_PORT} is used by a process that is not bothax-mcp: {e}. "
+            f"Check `ss -ltnp | grep {BRIDGE_PORT}`, or set GT_BRIDGE_PORT."
         ) from e
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
@@ -574,19 +541,18 @@ def start_bridge_server() -> int:
 @mcp.tool()
 @_safe
 def device_info() -> str:
-    """Info perangkat ADB, status game, dan status bridge Lua."""
+    """Device model, Android version, game process, and bridge state."""
     info = {}
     try:
         info["serial"] = device_serial()
-        # Satu round-trip untuk 4 properti (dulu 4 panggilan adb terpisah;
-        # tiap panggilan bisa 1-2 detik di device nirkabel).
+        # One round-trip for four properties; each adb call costs 1-2 s on wireless.
         props = adb_shell(
             "getprop ro.build.version.release; getprop ro.build.version.sdk; "
             "getprop ro.product.cpu.abi; getprop ro.product.model"
         ).splitlines()
         for key, val in zip(("android", "sdk", "abi", "model"), props):
             info[key] = val.strip()
-        # pid + fokus jendela dalam satu panggilan juga
+        # pid and window focus in the same call.
         probe = adb_shell(
             f"pidof {PACKAGE}; "
             f"dumpsys window | grep -m1 mCurrentFocus "
@@ -614,18 +580,16 @@ def device_info() -> str:
 @mcp.tool()
 @_safe
 def screenshot(save_to: str = ""):
-    """Ambil screenshot dan kembalikan gambarnya (agar bisa dilihat langsung)."""
+    """Return the screen as an image."""
     return Image(path=_screencap(save_to or _tmp_png("gt_shot")))
 
 
 @mcp.tool()
 @_safe
 def screenshot_crop(x0: int, y0: int, x1: int, y1: int, save_to: str = ""):
-    """Ambil screenshot lalu potong ke area tertentu dan kembalikan gambarnya.
-    Berguna untuk memperbesar panel mod sehingga widget kecil (checkbox,
-    slider, field) terbaca jelas sebelum menentukan koordinat tap.
-    Koordinat dalam piksel layar; (0,0) kiri-atas.
-    """
+    """Screenshot cropped to a region.
+
+    Use it to read small widgets clearly before choosing tap coordinates."""
     src = _screencap(_tmp_png("gt_full"))
     dst = save_to or _tmp_png("gt_crop")
 
@@ -633,23 +597,21 @@ def screenshot_crop(x0: int, y0: int, x1: int, y1: int, save_to: str = ""):
     try:
         pngio.crop(src, dst, x0, y0, x1, y1)
     except Exception as e:  # noqa: BLE001
-        return f"ERROR: crop gagal: {e}"
+        return f"ERROR: crop failed: {e}"
     return Image(path=dst)
 
 
 @mcp.tool()
 @_safe
 def panel_crop(x0: int = 0, y0: int = 0, x1: int = 1100, y1: int = 950):
-    """Potong area panel mod (default kiri-atas) supaya terbaca jelas.
-    Setara screenshot_crop dengan default yang cocok untuk menu BINTERNAL.
-    """
+    """Crop the mod panel area (top-left by default)."""
     return screenshot_crop(x0, y0, x1, y1)
 
 
 @mcp.tool()
 @_safe
 def tap(x: int, y: int) -> str:
-    """Ketuk koordinat layar."""
+    """Tap a screen coordinate."""
     adb("shell", f"input tap {x} {y}")
     return f"tap {x},{y}"
 
@@ -657,7 +619,7 @@ def tap(x: int, y: int) -> str:
 @mcp.tool()
 @_safe
 def swipe(x1: int, y1: int, x2: int, y2: int, duration_ms: int = 300) -> str:
-    """Geser dari (x1,y1) ke (x2,y2)."""
+    """Swipe from (x1,y1) to (x2,y2)."""
     adb("shell", f"input swipe {x1} {y1} {x2} {y2} {duration_ms}")
     return f"swipe {x1},{y1} -> {x2},{y2} ({duration_ms}ms)"
 
@@ -665,7 +627,7 @@ def swipe(x1: int, y1: int, x2: int, y2: int, duration_ms: int = 300) -> str:
 @mcp.tool()
 @_safe
 def key(code: str) -> str:
-    """Kirim keyevent, mis. 'KEYCODE_BACK', 'KEYCODE_ENTER'."""
+    """Send a keyevent, for example KEYCODE_BACK or KEYCODE_ENTER."""
     adb("shell", f"input keyevent {code}")
     return f"key {code}"
 
@@ -673,130 +635,125 @@ def key(code: str) -> str:
 @mcp.tool()
 @_safe
 def type_text(text: str) -> str:
-    """Ketik teks ASCII. Spasi aman, karakter shell di-escape, kutip dipertahankan.
+    """Type ASCII text on the device.
 
-    Non-ASCII ditolak dengan pesan jelas: `input text` bawaan Android hanya
-    menerima ASCII, dan sebelumnya teks seperti itu terkirim rusak tanpa error.
-    """
+    Spaces are sent as %s and the payload is quoted for the device shell, so quotes and
+    metacharacters survive. Non-ASCII is rejected with a clear message."""
     try:
         cmd = _input_text_command(text)
     except ValueError as e:
         return f"ERROR: {e}"
     p = adb("shell", cmd)
     if p.returncode != 0:
-        return f"ERROR: input text gagal: {(p.stderr or p.stdout).strip()[:200]}"
+        return f"ERROR: input text failed: {(p.stderr or p.stdout).strip()[:200]}"
     return f"typed {len(text)} chars"
 
 
 @mcp.tool()
 @_safe
 def launch_game() -> str:
-    """Jalankan Growtopia dan tunggu activity-nya fokus."""
+    """Start Growtopia and wait until its activity has focus."""
     p = adb("shell", f"am start -W -n {ACTIVITY}", timeout=60)
     out = (p.stdout + p.stderr).strip()
     if p.returncode != 0 or "Error" in out:
-        return f"ERROR: am start gagal: {out[:200]}"
+        return f"ERROR: am start failed: {out[:200]}"
     time.sleep(2)
     pid = game_pid()
-    return f"launched, pid={pid}" if pid else "launched tapi proses belum terlihat"
+    return f"launched, pid={pid}" if pid else "launched but the process is not visible yet"
 
 
 @mcp.tool()
 @_safe
 def stop_game() -> str:
-    """Force-stop Growtopia, lalu pastikan prosesnya benar-benar hilang."""
+    """Force-stop Growtopia and confirm the process is gone."""
     p = adb("shell", f"am force-stop {PACKAGE}")
     if p.returncode != 0:
-        return f"ERROR: force-stop gagal: {(p.stderr or p.stdout).strip()[:200]}"
+        return f"ERROR: force-stop failed: {(p.stderr or p.stdout).strip()[:200]}"
     time.sleep(0.5)
     pid = game_pid()
-    return "stopped" if pid is None else f"masih berjalan, pid={pid}"
+    return "stopped" if pid is None else f"still running, pid={pid}"
 
 
 @mcp.tool()
 @_safe
 def logcat(lines: int = 60, grep: str = "") -> str:
-    """Baris logcat terakhir, opsional difilter.
-
-    Saat memfilter, sampel diambil lebih banyak dulu (10x) supaya hasil tidak
-    kosong hanya karena `lines` baris terakhir kebetulan tak memuat kata kunci.
-    """
+    """Recent logcat lines, optionally filtered."""
     fetch = max(lines * 10, 400) if grep else lines
     out = adb("logcat", "-d", "-t", str(fetch)).stdout
     if grep:
         kept = [l for l in out.splitlines() if grep.lower() in l.lower()]
         out = "\n".join(kept[-lines:])
-    return out.strip() or "(kosong)"
+    return out.strip() or "(empty)"
 
 
 @mcp.tool()
 @_safe
 def install_apk(apk_path: str) -> str:
-    """Install APK (replace). Melaporkan kegagalan, bukan hanya output adb."""
+    """Install or replace an APK, reporting the failure rather than adb output."""
     if not Path(apk_path).expanduser().exists():
-        return f"ERROR: file tidak ada: {apk_path}"
+        return f"ERROR: file not found: {apk_path}"
     p = adb("install", "-r", str(Path(apk_path).expanduser()), timeout=600)
     text = (p.stdout + p.stderr).strip()
     if p.returncode != 0 or "Failure" in text:
-        return f"ERROR: install gagal: {text[:300]}"
+        return f"ERROR: install failed: {text[:300]}"
     return text
 
 
 @mcp.tool()
 @_safe
 def push_script(local_path: str, name: str = "") -> str:
-    """Salin file .lua ke folder script game di perangkat."""
+    """Copy a .lua file into the game's scripts folder."""
     src = Path(local_path).expanduser()
     if not src.exists():
-        return f"ERROR: file tidak ada: {local_path}"
+        return f"ERROR: file not found: {local_path}"
     name = name or src.name
     adb_shell(f"mkdir -p {SCRIPT_DIR}")
     p = adb("push", str(src), f"{SCRIPT_DIR}/{name}")
     text = (p.stdout or p.stderr).strip()
     if p.returncode != 0:
-        return f"ERROR: push gagal: {text[:200]}"
+        return f"ERROR: push failed: {text[:200]}"
     return text or f"pushed {name}"
 
 
 @mcp.tool()
 @_safe
 def list_scripts() -> str:
-    """Daftar script di folder game."""
+    """List the scripts available on the device."""
     out = adb_shell(f"ls -l {SCRIPT_DIR}")
-    return out or "(folder kosong / belum ada)"
+    return out or "(empty folder)"
 
 
 @mcp.tool()
 @_safe
 def install_bridge() -> str:
-    """Push bridge.lua ke perangkat dan pasang adb reverse untuk kanal kontrol."""
+    """Push bridge.lua and set up adb reverse for the control channel."""
     local = Path(__file__).with_name("bridge.lua")
     if not local.exists():
-        return f"ERROR: {local} tidak ada"
+        return f"ERROR: {local} does not exist"
     adb_shell(f"mkdir -p {SCRIPT_DIR}")
     push = adb("push", str(local), f"{SCRIPT_DIR}/bridge.lua")
     if push.returncode != 0:
-        return f"ERROR: push bridge.lua gagal: {(push.stderr or push.stdout).strip()[:200]}"
+        return f"ERROR: pushing bridge.lua failed: {(push.stderr or push.stdout).strip()[:200]}"
     rev = adb("reverse", f"tcp:{BRIDGE_PORT}", f"tcp:{BRIDGE_PORT}")
-    # Jangan percaya returncode saja: adb reverse bisa diam-diam tidak terpasang.
+    # Do not trust the return code: adb reverse can silently fail to install.
     listing = adb("reverse", "--list").stdout
-    terpasang = f"tcp:{BRIDGE_PORT}" in listing
-    if not terpasang:
+    installed = f"tcp:{BRIDGE_PORT}" in listing
+    if not installed:
         return (
-            f"ERROR: adb reverse gagal dipasang (rc={rev.returncode}): "
+            f"ERROR: adb reverse did not install (rc={rev.returncode}): "
             f"{(rev.stderr or rev.stdout).strip()[:200]}"
         )
     return (
         f"bridge.lua -> {SCRIPT_DIR}/bridge.lua\n"
-        f"adb reverse tcp:{BRIDGE_PORT} -> terpasang\n"
-        f"jalankan bridge.lua sekali dari menu executor game"
+        f"adb reverse tcp:{BRIDGE_PORT} -> installed\n"
+        f"run bridge.lua once from the game executor menu"
     )
 
 
 @mcp.tool()
 @_safe
 def bridge_status() -> str:
-    """Apakah bridge.lua sedang polling dari dalam game."""
+    """Whether bridge.lua is polling from inside the game."""
     return json.dumps(BRIDGE.status(), indent=2)
 
 
@@ -811,11 +768,7 @@ def _port_open(host: str, port: int, timeout: float = 1.0) -> bool:
 @mcp.tool()
 @_safe
 def adb_reconnect(address: str = "") -> str:
-    """Pulihkan transport adb yang drop (khas adb nirkabel / emulator).
-
-    `address` opsional, mis. "192.168.240.112:5555" untuk menyambung ulang
-    perangkat jaringan. Tanpa itu, hanya transport "offline" yang di-reconnect.
-    """
+    """Recover a dropped adb transport, typical for wireless adb and emulators."""
     notes: list[str] = []
     if address:
         notes.append(adb("connect", address, timeout=25).stdout.strip() or f"connect {address}")
@@ -827,31 +780,28 @@ def adb_reconnect(address: str = "") -> str:
         ]
     except Exception as e:  # noqa: BLE001
         off = []
-        notes.append(f"devices gagal: {e}")
+        notes.append(f"devices failed: {e}")
     if off:
         notes.append(adb("reconnect", timeout=25).stdout.strip() or "reconnect offline")
     devs = adb("devices", timeout=10).stdout.splitlines()[1:]
-    ringkas = "; ".join(l.strip() for l in devs if l.strip()) or "(tidak ada device)"
-    return "\n".join([*notes, f"device sekarang: {ringkas}"])
+    summary = "; ".join(l.strip() for l in devs if l.strip()) or "(no device)"
+    return "\n".join([*notes, f"device now: {summary}"])
 
 
 @mcp.tool()
 @_safe
 def bridge_doctor(auto_fix: bool = True) -> str:
-    """Diagnosa seluruh rantai kontrol dan perbaiki yang aman diperbaiki.
+    """Check the whole control chain and fix what is safe to fix.
 
-    Diperiksa berurutan: biner adb, device online, proses game, mapping
-    `adb reverse`, port bridge di host, lalu apakah bridge.lua polling. Kalau
-    `auto_fix=True`, mapping reverse yang hilang dipasang ulang. Hasilnya
-    berisi langkah mana yang gagal plus satu tindakan berikutnya.
-    """
+    Verifies device visibility, adb reverse mapping, bridge polling, and API availability,
+    then reports what it changed."""
     steps: list[dict] = []
     fixes: list[str] = []
 
     def add(name: str, ok: bool, detail) -> None:
-        steps.append({"cek": name, "ok": bool(ok), "detail": detail})
+        steps.append({"check": name, "ok": bool(ok), "detail": detail})
 
-    add("biner adb", bool(shutil.which(ADB) or Path(ADB).exists()), ADB)
+    add("adb binary", bool(shutil.which(ADB) or Path(ADB).exists()), ADB)
 
     devs: list[str] = []
     try:
@@ -860,15 +810,15 @@ def bridge_doctor(auto_fix: bool = True) -> str:
         add("adb devices", False, str(e))
     online = [l.split()[0] for l in devs if l.split()[1:2] == ["device"]]
     offline = [l.split()[0] for l in devs if l.split()[1:2] in (["offline"], ["unauthorized"])]
-    add("device online", bool(online), online or (offline and [f"{s} (offline/unauthorized)" for s in offline]) or "tidak ada")
+    add("device online", bool(online), online or (offline and [f"{s} (offline/unauthorized)" for s in offline]) or "none")
 
     pid = None
     if online:
         try:
             pid = game_pid()
-            add("game berjalan", pid is not None, f"pid={pid}" if pid else "Growtopia tidak jalan")
+            add("game running", pid is not None, f"pid={pid}" if pid else "Growtopia is not running")
         except Exception as e:  # noqa: BLE001
-            add("game berjalan", False, str(e))
+            add("game running", False, str(e))
         try:
             listing = adb("reverse", "--list", timeout=10).stdout
             mapped = f"tcp:{BRIDGE_PORT}" in listing
@@ -878,44 +828,44 @@ def bridge_doctor(auto_fix: bool = True) -> str:
                 mapped = f"tcp:{BRIDGE_PORT}" in listing
                 if mapped:
                     fixes.append(f"adb reverse tcp:{BRIDGE_PORT} dipasang ulang")
-            add("adb reverse", mapped, listing.strip() or "(belum ada mapping)")
+            add("adb reverse", mapped, listing.strip() or "(no mapping yet)")
         except Exception as e:  # noqa: BLE001
             add("adb reverse", False, str(e))
 
     port_ok = _port_open("127.0.0.1", BRIDGE_PORT)
-    add("port bridge host", port_ok, f"127.0.0.1:{BRIDGE_PORT}")
+    add("bridge port on host", port_ok, f"127.0.0.1:{BRIDGE_PORT}")
 
     st = BRIDGE.status()
     polling = bool(st.get("polling"))
     add("bridge polling", polling, st)
     diag = st.get("last_diag")
     if diag:
-        add("diag terakhir", True, diag)
+        add("last diag", True, diag)
 
     if not port_ok:
         verdict = (
-            "belum ada server bridge di port ini; jalankan `python server.py "
-            "(--http-only untuk bridge saja)` atau aktifkan MCP-nya"
+            "no bridge server on this port; run `python server.py` "
+            "(or `--http-only` for the bridge alone), or enable the MCP server"
         )
     elif not online:
         verdict = (
-            "device tidak online: sambungkan USB atau `adb_reconnect('ip:5555')`; "
-            "kalau masih `unauthorized`, terima dialog debugging di perangkat"
+            "device is not online: connect USB or call `adb_reconnect('ip:5555')`; "
+            "if it stays `unauthorized`, accept the debugging prompt on the device"
         )
     elif pid is None:
-        verdict = "device siap tapi Growtopia belum jalan → launch_game()"
+        verdict = "device ready but Growtopia is not running -> launch_game()"
     elif not polling:
         verdict = (
-            "port + reverse siap, tapi bridge.lua belum polling. Jalankan "
-            "bridge.lua dari executor DAN pastikan daftar API di setting "
-            "executor dicentang (tanpa itu MakeRequest gagal sebelum keluar "
-            "dari game). Cek baris 'PROBE /health' di konsol mod."
+            "port and reverse are ready, but bridge.lua is not polling. Run "
+            "bridge.lua from the executor AND make sure the API list is enabled "
+            "in the executor settings, otherwise MakeRequest fails before it "
+            "leaves the game. Check the 'PROBE /health' line in the mod console."
         )
     else:
-        verdict = "rantai lengkap: ADB → adb reverse → bridge.lua aktif"
+        verdict = "chain complete: ADB -> adb reverse -> bridge.lua polling"
 
     return json.dumps(
-        {"langkah": steps, "perbaikan": fixes, "kesimpulan": verdict}, indent=2
+        {"steps": steps, "fixes": fixes, "conclusion": verdict}, indent=2
     )
 
 
@@ -982,12 +932,8 @@ def _bfs_path(
     goal: tuple[int, int],
     bounds: tuple[int, int, int, int],
 ) -> list[tuple[int, int, str]] | None:
-    """Cari jalur di grid dengan model gerak Growtopia sederhana.
-
-    Tepi yang diizinkan: jalan datar, jatuh ke bawah, turun satu petak ke
-    samping, dan lompat naik 1 petak (butuh ruang kepala). Lompat 2 petak tidak
-    dimodelkan karena tinggi lompat di game ±1,5 petak.
-    """
+    """BFS over the tile grid with the moves the avatar can actually make:
+    walk, drop down, fall, and jump one tile up."""
     x0, y0, x1, y1 = bounds
 
     def inb(p: tuple[int, int]) -> bool:
@@ -1021,37 +967,37 @@ def _bfs_path(
         if cur == goal:
             break
         x, y = cur
-        # jalan datar / turun tebing
+        # flat walk or step down
         for dx in (-1, 1):
             side = (x + dx, y)
             if free(side):
                 if supported(side):
-                    push(cur, side, 1, "jalan")
+                    push(cur, side, 1, "walk")
                 else:
-                    # melangkah ke ruang kosong: jatuh sampai ada pijakan
+                    # stepping into air: fall until something holds
                     ny = y
                     while ny + 1 <= y1 and free((x + dx, ny + 1)):
                         ny += 1
-                    push(cur, (x + dx, ny), 1 + (ny - y), "jatuh")
+                    push(cur, (x + dx, ny), 1 + (ny - y), "fall")
             diag = (x + dx, y + 1)
             if free(diag) and supported(diag):
-                push(cur, diag, 1, "turun")
-        # lompat naik 1 petak (ruang kepala 2 petak harus kosong)
+                push(cur, diag, 1, "step_down")
+        # jump one tile up; two tiles of headroom must be free
         for dx in (-1, 0, 1):
             up = (x + dx, y - 1)
             if free(up) and free((x + dx, y - 2)):
-                push(cur, up, 2, "lompat")
-        # jatuh lurus ke bawah
+                push(cur, up, 2, "jump")
+        # straight fall
         down = (x, y + 1)
         if free(down):
             ny = y
             while ny + 1 <= y1 and free((x, ny + 1)):
                 ny += 1
-            push(cur, (x, ny), 1 + (ny - y), "jatuh")
+            push(cur, (x, ny), 1 + (ny - y), "fall")
 
     target = goal
     if target not in dist:
-        # boleh berhenti di petak sebelah pintu kalau pintunya solid
+        # may stop beside the door when the door tile is solid
         cands = [
             (goal[0] + dx, goal[1] + dy)
             for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))
@@ -1065,7 +1011,7 @@ def _bfs_path(
     node = target
     while node is not None:
         entry = prev.get(node)
-        how = entry[1] if entry else "mulai"
+        how = entry[1] if entry else "start"
         steps.append((node[0], node[1], how))
         node = entry[0] if entry else None
     steps.reverse()
@@ -1079,12 +1025,12 @@ local chk = false
 local okc, c = pcall(CheckPath, tx, ty)
 if okc then chk = (c == true) end
 if not chk then
-  return string.format('BLOCKED dari=%d,%d tile=%d,%d',
+  return string.format('BLOCKED from=%d,%d tile=%d,%d',
     math.floor(p0.x / 32), math.floor(p0.y / 32), tx, ty)
 end
 local okf, errf = pcall(FindPath, tx, ty)
--- FindPath kadang butuh waktu lebih dari satu tick: tunggu sampai posisi
--- berubah (maks ~1,5 s) sebelum menyimpulkan gagal.
+-- FindPath can take more than one tick: poll the position (max ~1.5 s)
+-- before calling it a failure.
 local p1 = p0
 local tries = 0
 while tries < 8 do
@@ -1096,7 +1042,7 @@ while tries < 8 do
     break
   end
 end
-return string.format('chk=true ok=%s err=%s dari=%d,%d ke=%d,%d pos=%.0f,%.0f tries=%d',
+return string.format('chk=true ok=%s err=%s from=%d,%d to=%d,%d pos=%.0f,%.0f tries=%d',
   tostring(okf), tostring(errf),
   math.floor(p0.x / 32), math.floor(p0.y / 32),
   math.floor(p1.x / 32), math.floor(p1.y / 32), p1.x, p1.y, tries)
@@ -1113,7 +1059,7 @@ def _kv_parse(raw: str) -> dict[str, str]:
 
 
 def _move_to_tile(tx: int, ty: int) -> dict[str, str]:
-    """Pindahkan avatar dengan FindPath bawaan game (instan), lalu verifikasi posisi."""
+    """Move with FindPath, then poll the position until the avatar really arrives."""
     raw = BRIDGE.submit(_MOVE_LUA.format(tx=int(tx), ty=int(ty)).strip(), 20)
     if raw.startswith("ERROR") or raw.startswith("TIMEOUT"):
         return {"error": raw}
@@ -1127,33 +1073,31 @@ def _move_to_tile(tx: int, ty: int) -> dict[str, str]:
 @mcp.tool()
 @_safe
 def go_to(tilex: int, tiley: int) -> str:
-    """Pindahkan avatar ke tile tertentu memakai `FindPath` bawaan game.
+    """Move the avatar to a tile using the game's own FindPath.
 
-    Alurnya: `CheckPath(tilex,tiley)` dulu (tile padat tidak dipaksa), lalu
-    `FindPath`, lalu posisi dibaca ulang untuk memastikan avatar benar pindah.
-    Catatan: ini fitur teleport/jalan cepat milik klien, bukan langkah-per-langkah.
-    """
+    CheckPath gates the call, FindPath executes it, and the position is read back to prove
+    the move happened. Movement is the client's fast-walk, not step-by-step animation."""
     r = _move_to_tile(tilex, tiley)
     if "error" in r:
         return r["error"]
     if r.get("blocked"):
         return json.dumps(
             {
-                "bergerak": False,
-                "alasan": f"CheckPath({tilex},{tiley}) = false (tile padat / tidak bisa dilalui)",
-                "dari": r.get("dari"),
+                "moved": False,
+                "reason": f"CheckPath({tilex},{tiley}) = false (solid tile)",
+                "from": r.get("from"),
             },
             indent=2,
         )
     return json.dumps(
         {
-            "bergerak": r.get("dari") != r.get("ke"),
-            "dari": r.get("dari"),
-            "ke": r.get("ke"),
+            "moved": r.get("from") != r.get("to"),
+            "from": r.get("from"),
+            "to": r.get("to"),
             "target": [int(tilex), int(tiley)],
-            "pos_dunia": r.get("pos"),
+            "world_pos": r.get("pos"),
             "findpath_ok": r.get("ok") == "true",
-            "tunggu_tick": r.get("tries"),
+            "wait_ticks": r.get("tries"),
         },
         indent=2,
     )
@@ -1198,7 +1142,7 @@ for id, v in pairs(after) do
   if d ~= 0 then delta[#delta + 1] = string.format('%d:%+d', id, d) end
 end
 table.sort(delta)
-return string.format('objek_awal=%d dikirim=%d objek_sisa=%d delta_inv=%s daftar=%s',
+return string.format('objects_before=%d sent=%d objects_left=%d delta_inv=%s list=%s',
   total, sent, sisa, table.concat(delta, ','), table.concat(daftar, ' '))
 """
 
@@ -1208,12 +1152,12 @@ for _, o in pairs(GetObjectList()) do
   local nm = '?'
   local ok, info = pcall(GetItemInfo, o.id)
   if ok and info and info.name then nm = tostring(info.name) end
-  daftar[#daftar + 1] = string.format('oid=%s id=%s nama=%s tile=%d,%d',
+  daftar[#daftar + 1] = string.format('oid=%s id=%s name=%s tile=%d,%d',
     tostring(o.oid), tostring(o.id), nm,
     math.floor(o.pos.x / 32), math.floor(o.pos.y / 32))
 end
 table.sort(daftar)
-return string.format('jumlah=%d|%s', #daftar, table.concat(daftar, '|'))
+return string.format('count=%d|%s', #daftar, table.concat(daftar, '|'))
 """
 
 
@@ -1222,7 +1166,7 @@ local id = {item}
 local amount = {amount}
 local ada = 0
 for _, it in pairs(GetInventory()) do if it.id == id then ada = ada + it.amount end end
-if ada <= 0 then return 'id={item} inv_awal=0 inv_akhir=0 jumlah=0 objek=0 total_amount=0 alasan=tidakada' end
+if ada <= 0 then return 'id={item} inv_before=0 inv_after=0 count=0 objects=0 total_amount=0 reason=missing' end
 if amount <= 0 or amount > ada then amount = ada end
 SendPacket(2, 'action|dialog_return\ndialog_name|drop\nitem_drop|' .. id .. '|\nitem_count|' .. amount .. '\n')
 Sleep(1200)
@@ -1233,7 +1177,7 @@ for _, o in pairs(GetObjectList()) do
 end
 local sisa = 0
 for _, it in pairs(GetInventory()) do if it.id == id then sisa = sisa + it.amount end end
-return string.format('id=%d jumlah=%d inv_awal=%d inv_akhir=%d objek=%d total_amount=%d alasan=ok',
+return string.format('id=%d count=%d inv_before=%d inv_after=%d objects=%d total_amount=%d reason=ok',
   id, amount, ada, sisa, objs, total)
 """
 
@@ -1241,15 +1185,11 @@ return string.format('id=%d jumlah=%d inv_awal=%d inv_akhir=%d objek=%d total_am
 @mcp.tool()
 @_safe
 def drop_item(item_id: int, amount: int = 0) -> str:
-    """Jatuhkan item ke tanah di tile avatar, satu paket, bukan dialog manual.
+    """Drop an item on the avatar's tile with one packet.
 
-    `SendPacket(2, "action|dialog_return\\ndialog_name|drop\\nitem_drop|<id>|\\nitem_count|<n>\\n")`
-    dengan pipa penutup setelah id. `amount=0` = seluruh isi stack (**drop all**).
-
-    Hasil memuat `objek` (jumlah objek di world sesudahnya) dan `total_amount`
-    (jumlah unit item itu yang benar-benar jadi objek). Satu objek bisa membawa
-    beberapa unit, jadi jangan samakan jumlah barang dengan jumlah objek.
-    """
+    Format: action|dialog_return, dialog_name|drop, item_drop|<id>|, item_count|<n>.
+    amount=0 drops the whole stack. One object can carry several units, so object count is
+    not item count."""
     code = _DROP_LUA.format(item=int(item_id), amount=int(amount)).strip()
     raw = BRIDGE.submit(code, 20)
     if raw.startswith("ERROR") or raw.startswith("TIMEOUT"):
@@ -1257,28 +1197,24 @@ def drop_item(item_id: int, amount: int = 0) -> str:
     meta = _kv_parse(_unescape_lua(raw))
     if not meta:
         return raw
-    hasil = {}
+    out = {}
     for k, v in meta.items():
         try:
-            hasil[k] = int(v)
+            out[k] = int(v)
         except ValueError:
-            hasil[k] = v
-    return json.dumps(hasil, indent=2)
+            out[k] = v
+    return json.dumps(out, indent=2)
 
 
 @mcp.tool()
 @_safe
 def collect_objects(item_id: int = 0, radius: float = 0, delay_ms: int = 60) -> str:
-    """Pungut objek jatuh (drop) di world dengan paket `type=11`.
+    """Pick up ground objects with a type=11 packet.
 
-    Mekanismenya terbukti live: `SendPacketRaw(false, {type=11, state=0,
-    value=<oid objek>, px=<pos.x objek>, py=<pos.y objek>, x/y=pos avatar})`.
-    `value` harus **oid objek** (field `WorldObject.oid`), bukan item id.
-    Inilah bedanya dengan paket place/break yang memakai item id.
-
-    `item_id=0` memungut semua objek; `radius>0` membatasi jarak dalam petak
-    dari avatar. Tanpa perintah gerak: avatar tidak berpindah tile.
-    """
+    The packet is SendPacketRaw(false, {type=11, state=0, value=<object oid>,
+    px=<object pos.x>, py=<object pos.y>}). value is the object's oid, not the item id.
+    item_id=0 collects everything; radius limits the distance in tiles. The avatar does not
+    move."""
     delay = max(0, min(int(delay_ms), 1000))
     code = _COLLECT_LUA.format(item=int(item_id), radius=float(radius), delay=delay).strip()
     raw = BRIDGE.submit(code, 30)
@@ -1287,7 +1223,7 @@ def collect_objects(item_id: int = 0, radius: float = 0, delay_ms: int = 60) -> 
     raw = _unescape_lua(raw)
     meta = _kv_parse(raw)
     if not meta:
-        return json.dumps({"mentah": raw}, indent=2)
+        return json.dumps({"raw": raw}, indent=2)
     delta = {}
     for pasangan in (meta.get("delta_inv") or "").split(","):
         if ":" in pasangan:
@@ -1298,12 +1234,12 @@ def collect_objects(item_id: int = 0, radius: float = 0, delay_ms: int = 60) -> 
                 delta[k] = v
     return json.dumps(
         {
-            "target": int(item_id) if item_id else "semua",
-            "objek_awal": int(meta.get("objek_awal", 0) or 0),
-            "dikirim": int(meta.get("dikirim", 0) or 0),
-            "objek_sisa": int(meta.get("objek_sisa", 0) or 0),
-            "inventori_berubah": delta,
-            "daftar": (meta.get("daftar") or "").split(),
+            "target": int(item_id) if item_id else "all",
+            "objects_before": int(meta.get("objects_before", 0) or 0),
+            "sent": int(meta.get("sent", 0) or 0),
+            "objects_left": int(meta.get("objects_left", 0) or 0),
+            "inventory_delta": delta,
+            "list": (meta.get("list") or "").split(),
         },
         indent=2,
     )
@@ -1312,38 +1248,31 @@ def collect_objects(item_id: int = 0, radius: float = 0, delay_ms: int = 60) -> 
 @mcp.tool()
 @_safe
 def list_objects() -> str:
-    """Daftar objek/drop yang sedang ada di world (oid, item id, nama, tile)."""
+    """Ground objects with their oid, item id, name, and tile."""
     raw = BRIDGE.submit(_LIST_OBJECTS_LUA.strip(), 20)
     if raw.startswith("ERROR") or raw.startswith("TIMEOUT"):
         return raw
     raw = _unescape_lua(raw)
-    judul, _, isi = raw.partition("|")
-    items = [b for b in isi.split("|") if b.strip()]
-    return json.dumps({"jumlah": len(items), "objek": items}, indent=2)
+    title, _, body = raw.partition("|")
+    items = [b for b in body.split("|") if b.strip()]
+    return json.dumps({"count": len(items), "objects": items}, indent=2)
 
 
 @mcp.tool()
 @_safe
 def find_path(target: str = "door", margin: int = 10, move: bool = False) -> str:
-    """Cari jalur jalan dari avatar ke objek terdekat yang namanya cocok.
+    """Find a walking route from the avatar to the nearest tile whose item name matches.
 
-    `target` dicocokkan ke nama item (tanpa peduli huruf besar/kecil), mis.
-    "door", "white door", "chest", "portal". Grid dibaca langsung dari game
-    (GetTiles/GetTile), lalu BFS dengan model gerak: jalan, turun, jatuh, dan
-    lompat naik 1 petak. Hasil: daftar waypoint petak + piksel + peta ASCII
-    dengan jalur ditandai '*'.
-
-    `move=True` langsung memindahkan avatar ke target memakai `FindPath`
-    bawaan game (CheckPath dulu; kalau target padat, ke waypoint terdekat).
-    """
+    The grid is read from the game and searched with BFS. The result lists waypoints plus
+    an ASCII map with the route marked. move=True also moves the avatar with FindPath."""
     code = _FIND_PATH_LUA.format(target=_lua_literal(target), margin=int(margin))
     raw = BRIDGE.submit(code.strip(), 25)
     if raw.startswith("ERROR") or raw.startswith("TIMEOUT"):
         return raw
-    # hasil string di-quote dan newline-nya di-escape oleh enc() di bridge.lua
+    # enc() in bridge.lua quotes the string and escapes newlines
     raw = _unescape_lua(raw)
     if raw.strip() == "NOTFOUND" or "NOTFOUND" in raw[:40]:
-        return f"tidak ada tile dengan nama mengandung '{target}' di world ini"
+        return f"no tile name contains '{target}' in this world"
 
     lines = raw.splitlines()
     meta: dict[str, str] = {}
@@ -1371,7 +1300,7 @@ def find_path(target: str = "door", margin: int = 10, move: bool = False) -> str
         for i, ch in enumerate(body):
             if ch in "#o":
                 solids.add((x0 + i, y))
-    # pintu sendiri bukan penghalang
+    # the door itself is not an obstacle
     solids.discard((tx, ty))
 
     steps = _bfs_path(solids, (px, py), (tx, ty), (x0, y0, x1, y1))
@@ -1379,22 +1308,22 @@ def find_path(target: str = "door", margin: int = 10, move: bool = False) -> str
         return json.dumps(
             {
                 "target": {"tile": [tx, ty], "name": meta.get("name")},
-                "dari": [px, py],
-                "kesimpulan": "tidak ada jalur dengan model gerak ini (terhalang / perlu item)",
+                "from": [px, py],
+                "conclusion": "no route with these moves (blocked, or an item is required)",
             },
             indent=2,
         )
 
-    moves = [s[2] for s in steps if s[2] != "mulai"]
-    ringkas: dict[str, int] = {}
+    moves = [s[2] for s in steps if s[2] != "start"]
+    move_counts: dict[str, int] = {}
     for m in moves:
-        ringkas[m] = ringkas.get(m, 0) + 1
+        move_counts[m] = move_counts.get(m, 0) + 1
 
-    # peta ASCII dengan jalur
+    # ASCII map with the route
     marks = {(s[0], s[1]): "*" for s in steps}
     marks[(px, py)] = "A"
     marks[(tx, ty)] = "D"
-    peta = []
+    map_lines = []
     for row in grid:
         y = int(row[:2])
         body = list(row[2:])
@@ -1402,78 +1331,73 @@ def find_path(target: str = "door", margin: int = 10, move: bool = False) -> str
             p = (x0 + i, y)
             if p in marks:
                 body[i] = marks[p]
-        peta.append(f"{y:02d} {''.join(body)}")
+        map_lines.append(f"{y:02d} {''.join(body)}")
 
     waypoints = [
         {
             "tile": [x, y],
-            # koordinat dunia (sama seperti GetLocal().pos), bukan koordinat layar
-            "pos_dunia": [x * 32 + 16, y * 32 + 32],
-            "aksi": how,
+            # world pixels, same as GetLocal().pos, not screen coordinates
+            "world_pos": [x * 32 + 16, y * 32 + 32],
+            "action": how,
         }
         for x, y, how in steps
     ]
-    hasil = {
+    result = {
         "target": {"tile": [tx, ty], "fg": meta.get("fg"), "name": meta.get("name")},
-        "dari": [px, py],
-        "langkah": len(steps) - 1,
-        "rincian_gerak": ringkas,
+        "from": [px, py],
+        "steps": len(steps) - 1,
+        "move_counts": move_counts,
         "waypoints": waypoints,
-        "peta": peta,
+        "map": map_lines,
     }
 
     if move:
-        # FindPath bawaan game memindahkan avatar secara instan; CheckPath
-        # menentukan apakah tile tujuan boleh dipakai. Kalau target padat,
-        # pindah ke waypoint terakhir yang bisa dilalui.
+        # FindPath moves the avatar at once; CheckPath says whether a tile is passable.
+    # If the target is solid, move to the last walkable waypoint instead.
         r = _move_to_tile(tx, ty)
         if r.get("blocked") or "error" in r:
-            dicoba = 0
+            tries = 0
             for sx, sy, _how in reversed(steps):
-                if dicoba >= 3:
+                if tries >= 3:
                     break
-                dicoba += 1
+                tries += 1
                 r2 = _move_to_tile(sx, sy)
                 if not r2.get("blocked") and "error" not in r2:
-                    hasil["catatan"] = (
-                        f"tile target ({tx},{ty}) tidak bisa dilalui; "
-                        f"avatar dipindah ke waypoint ({sx},{sy})"
+                    result["note"] = (
+                        f"target tile ({tx},{ty}) is not passable; "
+                        f"avatar moved to waypoint ({sx},{sy})"
                     )
                     r = r2
                     break
         if "error" in r:
-            hasil["pindah"] = {"bergerak": False, "error": r["error"]}
+            result["move"] = {"moved": False, "error": r["error"]}
         elif r.get("blocked"):
-            hasil["pindah"] = {
-                "bergerak": False,
-                "alasan": "CheckPath menolak semua kandidat tile (jalur terhalang)",
+            result["move"] = {
+                "moved": False,
+                "reason": "CheckPath rejected every candidate tile (route blocked)",
             }
         else:
-            hasil["pindah"] = {
-                "bergerak": r.get("dari") != r.get("ke"),
-                "dari": r.get("dari"),
-                "ke": r.get("ke"),
-                "pos_dunia": r.get("pos"),
+            result["move"] = {
+                "moved": r.get("from") != r.get("to"),
+                "from": r.get("from"),
+                "to": r.get("to"),
+                "world_pos": r.get("pos"),
             }
 
-    return json.dumps(hasil, indent=2)
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool()
 @_safe
 def lua_eval(code: str, timeout_s: float = RESULT_TIMEOUT) -> str:
-    """Eksekusi kode Lua di dalam proses game dan kembalikan hasilnya.
-
-    Contoh: lua_eval("return GetLocal().name")
-            lua_eval("local w = GetWorld(); return w.name")
-    """
+    """Run Lua inside the game process and return its result."""
     return BRIDGE.submit(code, timeout_s)
 
 
 @mcp.tool()
 @_safe
 def game_snapshot() -> str:
-    """Ringkasan state game: pemain lokal, dunia, inventori, jumlah objek."""
+    """Player, world, inventory, object count, and the tile under the avatar."""
     code = """
 local out = {}
 local ok, local_p = pcall(function() return GetLocal() end)
@@ -1481,7 +1405,7 @@ if ok and local_p then
   out.name = local_p.name
   out.userid = local_p.userid
   if local_p.pos then
-    -- pos dalam pixel; 32 px = 1 petak (lihat docs/structures/Vec2.md)
+    -- position in pixels; 32 px = 1 tile (see docs/structures/Vec2.md)
     local px, py = local_p.pos.x, local_p.pos.y
     out.pos = { x = px, y = py }
     out.pos_tile = { x = math.floor(px / 32), y = math.floor(py / 32) }
@@ -1516,63 +1440,56 @@ return out
 @mcp.tool()
 @_safe
 def traffic_start(max: int = 400) -> str:
-    """Mulai menangkap lalu lintas paket di dalam game lewat hook
-    OnSendPacket / OnSendPacketRaw / OnVariant / OnProcessTankUpdate.
-    Paket tetap diteruskan; capturer hanya membaca.
-    """
+    """Start capturing packets with the four Bothax hooks.
+    Packets keep flowing; the capturer only reads."""
     return BRIDGE.submit(f"return _TRAFFIC_START({int(max)})", 10)
 
 
 @mcp.tool()
 @_safe
 def traffic_stop() -> str:
-    """Hentikan penangkapan lalu lintas paket."""
+    """Stop the packet capturer."""
     return BRIDGE.submit("return _TRAFFIC_STOP()", 10)
 
 
 @mcp.tool()
 @_safe
 def traffic_dump(lines: int = 50, contains: str = "") -> str:
-    """Ambil n kejadian lalu lintas terakhir (terbaru di bawah).
-    `contains` memfilter baris, mis. 'VARIANT', 'SENDRAW', 'OnConsoleMessage'.
-    """
+    """Latest capture lines, newest last. contains filters by type, for example SENDRAW."""
     raw = BRIDGE.submit(f"return _TRAFFIC_TEXT({int(lines)})", 10)
-    # hasil dari Lua berupa satu string dengan pemisah 0x1e, lalu di-quote oleh enc()
-    text = "\n".join(p for p in _unescape_lua(raw).split("\x1e") if p.strip()) or "(buffer kosong)"
+    # Lua returns one string separated by 0x1e, then enc() quotes it
+    text = "\n".join(p for p in _unescape_lua(raw).split("\x1e") if p.strip()) or "(empty buffer)"
     if not contains:
         return text
     kept = [l for l in text.splitlines() if contains.lower() in l.lower()]
-    return "\n".join(kept) if kept else f"(tidak ada baris mengandung '{contains}'; total {len(text.splitlines())} baris)"
+    return "\n".join(kept) if kept else f"(no line contains '{contains}'; {len(text.splitlines())} lines total)"
 
 
 @mcp.tool()
 @_safe
 def traffic_stats() -> str:
-    """Statistik capturer: aktif, total kejadian, isi buffer, jumlah per jenis."""
+    """Capturer statistics: active, events, buffer size, counts per kind."""
     return BRIDGE.submit("return _TRAFFIC_STATS()", 10)
 
 
 @mcp.tool()
 @_safe
 def traffic_clear() -> str:
-    """Kosongkan buffer lalu lintas tanpa menghentikan capturer."""
+    """Empty the capture buffer without stopping the capturer."""
     return BRIDGE.submit("return _TRAFFIC_CLEAR()", 10)
 
 
 @mcp.tool()
 @_safe
 def debug_log(lines: int = 40) -> str:
-    """Log internal dari dalam game: setiap perintah yang masuk, hasilnya, error,
-    dan semua output LogToConsole milik script lain. Diambil dari buffer
-    _BRIDGE_LOG di bridge.lua (maks 300 baris).
-    """
+    """Bridge log from inside the game: commands, results, errors, and LogToConsole output."""
     return BRIDGE.submit(f"return _BRIDGE_LOG({int(lines)})", 8)
 
 
 @mcp.tool()
 @_safe
 def debug_state() -> str:
-    """Ringkasan diagnostik: proses game, bridge, error logcat, dan log bridge."""
+    """Combined diagnostics: game process, bridge, logcat errors, and the bridge log tail."""
     out = {}
     try:
         pid = game_pid()
@@ -1595,7 +1512,7 @@ def debug_state() -> str:
 @mcp.tool()
 @_safe
 def api_list() -> str:
-    """Daftar dokumentasi API (fungsi) dan struktur data yang tersedia lokal."""
+    """Local documentation index for Bothax functions and structures."""
     root = Path(__file__).with_name("docs")
     funcs = sorted(p.stem for p in (root / "functions").glob("*.md"))
     structs = sorted(p.stem for p in (root / "structures").glob("*.md"))
@@ -1610,9 +1527,7 @@ def api_list() -> str:
 @mcp.tool()
 @_safe
 def api_doc(name: str) -> str:
-    """Baca dokumentasi resmi sebuah fungsi/struktur/contoh (mis. 'GetTile',
-    'GameUpdatePacket', '02_hooks.lua').
-    """
+    """Read one documentation file, for example GetTile or GameUpdatePacket."""
     root = Path(__file__).with_name("docs")
     for cand in (
         root / "functions" / f"{name}.md",
@@ -1622,7 +1537,7 @@ def api_doc(name: str) -> str:
     ):
         if cand.exists():
             return cand.read_text(encoding="utf-8")
-    return f"tidak ada doc bernama '{name}'. Panggil api_list() untuk daftar."
+    return f"no doc named '{name}'. Call api_list() for the index."
 
 
 CONTROL_TOOLS = {
@@ -1668,13 +1583,13 @@ def main() -> None:
     if "--http-only" in sys.argv:
         if BRIDGE_MODE == "attached":
             print(
-                f"port {port} sudah dipegang instance bothax-mcp lain; "
-                f"proses --http-only ini tidak diperlukan (keluar)",
+                f"port {port} is held by another bothax-mcp instance; "
+                f"this --http-only process is not needed (exiting)",
                 file=sys.stderr,
                 flush=True,
             )
             raise SystemExit(3)
-        print(f"bridge + kontrol HTTP siap di 127.0.0.1:{port}", flush=True)
+        print(f"bridge + HTTP control ready on 127.0.0.1:{port}", flush=True)
         try:
             while True:
                 time.sleep(3600)
