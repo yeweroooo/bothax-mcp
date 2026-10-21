@@ -84,7 +84,8 @@ what the failure looked like.
   traps listed in `README.md` and `AGENTS.md`.
 - Review can take a while. A polite ping after a week is fine.
 
-Once merged, the PR author is credited in the commit history. There is no CLA.
+Once merged, the PR author is credited in the commit history. There is no CLA: by opening
+a pull request you agree that your contribution ships under the repo's [MIT license](LICENSE).
 
 ## Reporting a problem
 

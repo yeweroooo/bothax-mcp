@@ -218,6 +218,10 @@ what the game API does. Read [CONTRIBUTING.md](CONTRIBUTING.md) first; the short
 
 Nothing is pushed straight to `main`.
 
+## License
+
+MIT, see [LICENSE](LICENSE). Use it, fork it, ship it; keep the copyright notice.
+
 ## Limits
 
 - **The executor is required.** If the BINTERNAL menu is still locked, `bridge.lua` cannot
