@@ -1,23 +1,24 @@
 # Encrypt(text: string[, key: int]) -> string
 
-Mengenkripsi teks menjadi string terenkripsi. Cocok untuk menyembunyikan isi script atau data sensitif sebelum dikirim/di-embed.
+Encrypts text into an encrypted string. Handy for hiding script bodies or sensitive
+strings before you embed or send them.
 
-Parameter
-- `text: string`: Teks yang akan dienkripsi.
-- `key: int (opsional)`: Kunci enkripsi.
+Parameters
+- `text: string`: the text to encrypt.
+- `key: int (optional)`: encryption key.
 
-Nilai kembali
-- `string`: Hasil teks terenkripsi.
+Returns
+- `string`: the encrypted text.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
-local secret = Encrypt('assalamualaikum')
+local secret = Encrypt('hello there')
 LogToConsole(secret)
 
-local withKey = Encrypt('assalamualaikum', 123)
+local withKey = Encrypt('hello there', 123)
 LogToConsole(withKey)
 ```
 
-Terkait
+Related
 - [LoadEncrypt](LoadEncrypt.md)
 - [EncryptFile](EncryptFile.md)

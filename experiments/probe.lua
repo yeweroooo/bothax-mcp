@@ -7,11 +7,11 @@ local function log(s)
   out[#out + 1] = tostring(s)
 end
 
--- sinyal 1
+-- signal 1
 local ok, err = pcall(function()
   local f = io.open("/sdcard/gtprobe.txt", "w")
   if f then
-    f:write("executor hidup\n")
+    f:write("executor alive\n")
     f:close()
     log("file: ok")
   else
@@ -20,7 +20,7 @@ local ok, err = pcall(function()
 end)
 if not ok then log("file error: " .. tostring(err)) end
 
--- sinyal 2
+-- signal 2
 local ok2, err2 = pcall(function()
   local r = MakeRequest("http://127.0.0.1:8770/health", "GET", nil, nil, 4000)
   if r then
@@ -31,7 +31,7 @@ local ok2, err2 = pcall(function()
 end)
 if not ok2 then log("http error: " .. tostring(err2)) end
 
--- tulis ringkasan
+-- write the summary
 pcall(function()
   local f = io.open("/sdcard/gtprobe_result.txt", "w")
   if f then f:write(table.concat(out, "\n")); f:close() end

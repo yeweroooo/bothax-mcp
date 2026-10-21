@@ -1,18 +1,19 @@
 # Hash32(text: string[, seed: uint32]) -> number
 
-Menghasilkan hash FNV-1a 32-bit. Hash non-kriptografis; cocok untuk pembuatan kunci cache, penandaan cepat, atau checksum ringan. Gunakan `seed` untuk variasi deterministik.
+Returns a 32-bit FNV-1a hash. Not cryptographic; good for cache keys, quick tagging, and
+light checksums. `seed` shifts the result deterministically.
 
-Parameter
-- `text: string`: Input string.
-- `seed: uint32 (opsional)`: Seed tambahan.
+Parameters
+- `text: string`: input string.
+- `seed: uint32 (optional)`: extra seed.
 
-Nilai kembali
-- `number`: Nilai hash 32-bit.
+Returns
+- `number`: 32-bit hash.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local h = Hash32('bothax')
-LogToConsole('Hash : ' .. tostring(h))
+LogToConsole('hash : ' .. tostring(h))
 local hs = Hash32('bothax', 12345)
-LogToConsole('Hash w/seed : ' .. tostring(hs))
+LogToConsole('hash with seed : ' .. tostring(hs))
 ```

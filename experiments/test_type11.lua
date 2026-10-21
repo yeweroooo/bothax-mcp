@@ -24,15 +24,15 @@ local log = {}
 
 SendPacket(2, "action|drop\n|itemID|" .. id .. "\n")
 Sleep(1200)
-local n1, ada = objs()
-log[#log + 1] = string.format("drop(id=%d) inv %d->%d objs=%d ada=%s",
-  id, before, inv(id), n1, tostring(ada ~= nil))
+local n1, found = objs()
+log[#log + 1] = string.format("drop(id=%d) inv %d->%d objs=%d found=%s",
+  id, before, inv(id), n1, tostring(found ~= nil))
 
-if not ada then
-  return table.concat(log, " | ") .. " || drop ditolak server"
+if not found then
+  return table.concat(log, " | ") .. " || the server rejected the drop"
 end
 
-local oid, px, py = ada.oid, ada.pos.x, ada.pos.y
+local oid, px, py = found.oid, found.pos.x, found.pos.y
 local p = GetLocal().pos
 SendPacketRaw(false, {type = 11, state = 0, value = oid, px = px, py = py, x = p.x, y = p.y})
 Sleep(1500)

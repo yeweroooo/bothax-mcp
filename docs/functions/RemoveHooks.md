@@ -1,17 +1,18 @@
-# RemoveHooks
+# RemoveHooks()
 
-Menghapus semua hook yang terdaftar. Berguna untuk reset cepat saat pengembangan atau ketika ingin menonaktifkan semua event listener.
+Removes every registered hook. Useful when iterating on a script, or when you want all
+listeners gone before installing a fresh set.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 AddHook('OnSendPacket', 1, function(_, s) LogToConsole(s) end)
-AddHook('OnSendPacketRaw', '1', function(p) LogToConsole(p.type) end)
+AddHook('OnSendPacketRaw', 2, function(p) LogToConsole(p.type) end)
 RemoveHooks()
 ```
 
-Terkait
+Related
 - [RemoveHook](RemoveHook.md)
 - [AddHook](AddHook.md)

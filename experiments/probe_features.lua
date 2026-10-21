@@ -7,7 +7,7 @@ local candidates = {
   '[A] Farm: Auto pickup', '[A] Auto pickup', '[A] Vacuum', '[A] Magnet',
 }
 local out = {}
-for _, k in ipairs(kandidat) do
+for _, k in ipairs(candidates) do
   local ok, v = pcall(GetValue, k)
   out[#out + 1] = k .. ' => ' .. (ok and tostring(v) or ('ERROR ' .. tostring(v)))
 end

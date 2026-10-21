@@ -1,18 +1,19 @@
 # ENetClient (address:string, port:int, ping:int)
 
-Informasi koneksi ENet ke server (alamat, port, ping). Bermanfaat untuk memantau latency/ping saat ini dan alamat server yang terhubung.
+The ENet connection to the server. Useful for showing latency or logging which server a
+session landed on.
 
-Bidang
-- `address: string`: Alamat server (IP/host).
-- `port: int`: Port server.
-- `ping: int`: Ping saat ini (ms).
+Fields
+- `address: string`: server address.
+- `port: int`: server port.
+- `ping: int`: current ping in milliseconds.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local cli = GetClient()
-LogToConsole(('Terhubung ke %s:%d (ping %d ms)')
+LogToConsole(('connected to %s:%d (ping %d ms)')
   :format(cli.address, cli.port, cli.ping))
 ```
 
-Terkait
+Related
 - [GetClient](../functions/GetClient.md)

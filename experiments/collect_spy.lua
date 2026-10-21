@@ -54,4 +54,4 @@ RunThread(function()
   if f then f:close() end
 end)
 
-return 'spy aktif 120s: ' .. path
+return 'spy active for 120s: ' .. path

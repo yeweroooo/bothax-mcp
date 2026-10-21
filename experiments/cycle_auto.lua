@@ -30,7 +30,7 @@ SendPacketRaw(false, {type = 3, netid = 0, snetid = 0, state = 0, value = ITEM,
   x = p.x, y = p.y, xspeed = 0, yspeed = 0, px = tx, py = ty, extrasize = 0})
 Sleep(400)
 local function fg() local t = GetTile(tx, ty); return t and tonumber(t.fg) or 0 end
-if fg() ~= ITEM then return 'PLACE_GAGAL fg=' .. tostring(fg()) end
+if fg() ~= ITEM then return 'PLACE_FAILED fg=' .. tostring(fg()) end
 local hits = 0
 while hits < 12 and fg() == ITEM do
   SendPacketRaw(false, {type = 3, netid = 0, snetid = 0, state = 0, value = 18,

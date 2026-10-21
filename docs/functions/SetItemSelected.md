@@ -1,14 +1,15 @@
 # SetItemSelected(itemid: int)
 
-Memilih item dari inventaris berdasarkan ID-nya. Meniru aksi memilih item seperti di UI permainan. Pastikan `itemid` ada di inventaris.
+Selects an inventory item by id, the same as clicking it in the game UI. The item has to be
+in the inventory.
 
-Parameter
-- `itemid: int`: ID item yang ingin dipilih.
+Parameters
+- `itemid: int`: item id to select.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 SetItemSelected(242)
 ```

@@ -1,16 +1,16 @@
--- Quick Start: hook dialog dan tampilkan teks sederhana
+-- Quick start: block a dialog and react to chat input.
+-- Labels are numbers on purpose: string labels register no callback.
 
-AddHook('OnVariant', 'block_dialog', function(var)
+AddHook('OnVariant', 1, function(var)
   if var[0] == 'OnDialogRequest' then
-    LogToConsole('Dialog diblokir oleh script')
-    return true
+    LogToConsole('dialog blocked by the script')
+    return true -- returning true swallows the event
   end
 end)
 
-AddHook('OnSendPacket', 101, function(type, text)
+AddHook('OnSendPacket', 101, function(typ, text)
   if text:find('/hi') then
-    LogToConsole('Halo dari Bothax Lua!')
+    LogToConsole('hello from Bothax Lua!')
     return true
   end
 end)
-

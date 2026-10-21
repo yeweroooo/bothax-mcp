@@ -1,16 +1,16 @@
 # GetWorld() -> World
 
-Mengambil info world yang sedang dimuat. Gunakan untuk mengetahui nama world dan ukurannya, misalnya saat menampilkan overlay info.
+Returns the world currently loaded: name, size in tiles, and object counts.
 
-Nilai kembali
+Returns
 - `World`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local world = GetWorld()
 LogToConsole('you are in world : ' .. world.name)
 LogToConsole('world size : ' .. world.width .. ' x ' .. world.height)
 ```
 
-Terkait
+Related
 - [World](../structures/World.md)

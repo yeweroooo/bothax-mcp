@@ -14,22 +14,22 @@ local function fg(x, y)
   if t == nil then return -1 end
   return tonumber(t.fg) or 0
 end
-if type(_POTLOOP) == 'table' and _POTLOOP.aktif then
-  return 'SUDAH_JALAN siklus=' .. tostring(_POTLOOP.siklus)
+if type(_POTLOOP) == 'table' and _POTLOOP.active then
+  return 'ALREADY_RUNNING cycles=' .. tostring(_POTLOOP.cycles)
 end
 ChangeValue('[A] Auto collect', true)
 _POTLOOP = {
-  aktif = true, selesai = false, siklus = 0, hits = 0, lewat = 0,
-  awal = inv(ITEM), sekarang = inv(ITEM), mulai = GetTick(), catatan = '',
+  active = true, finished = false, cycles = 0, hits = 0, skipped = 0,
+  start_inv = inv(ITEM), inv_now = inv(ITEM), started = GetTick(), note = '',
 }
 RunThread(function()
   while true do
     local n = inv(ITEM)
-    _POTLOOP.sekarang = n
+    _POTLOOP.inv_now = n
     if n <= 0 then break end
     if fg(TX, TY) ~= 0 then
-      _POTLOOP.lewat = _POTLOOP.lewat + 1
-      _POTLOOP.catatan = 'tile terisi fg=' .. tostring(fg(TX, TY))
+      _POTLOOP.skipped = _POTLOOP.skipped + 1
+      _POTLOOP.note = 'tile occupied fg=' .. tostring(fg(TX, TY))
       Sleep(400)
     else
       local p = GetLocal().pos
@@ -45,15 +45,15 @@ RunThread(function()
         Sleep(300)
       end
       if fg(TX, TY) == ITEM then
-        _POTLOOP.catatan = 'blok tidak hancur setelah ' .. hits .. ' hit'
+        _POTLOOP.note = 'block did not break after ' .. hits .. ' hits'
       else
-        _POTLOOP.siklus = _POTLOOP.siklus + 1
+        _POTLOOP.cycles = _POTLOOP.cycles + 1
       end
       Sleep(200)
     end
   end
-  _POTLOOP.aktif = false
-  _POTLOOP.selesai = true
-  _POTLOOP.sekarang = inv(ITEM)
+  _POTLOOP.active = false
+  _POTLOOP.finished = true
+  _POTLOOP.inv_now = inv(ITEM)
 end)
-return 'MULAI awal=' .. tostring(_POTLOOP.awal)
+return 'START start_inv=' .. tostring(_POTLOOP.start_inv)

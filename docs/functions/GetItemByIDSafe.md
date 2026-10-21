@@ -1,18 +1,19 @@
 # GetItemByIDSafe(itemid: int) -> ItemInfo
 
-Mengambil data item berdasarkan ID dengan aman dari database item. Pilihan aman untuk ID yang valid; mengembalikan detail lengkap item.
+Looks an item up by id and returns the full record. Prefer it over `GetItemInfo` when you
+already have a numeric id.
 
-Parameter
-- `itemid: int`: ID item.
+Parameters
+- `itemid: int`: item id.
 
-Nilai kembali
+Returns
 - `ItemInfo`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 LogToConsole(GetItemByIDSafe(242).name)
 ```
 
-Terkait
+Related
 - [ItemInfo](../structures/ItemInfo.md)
 - [GetItemInfo](GetItemInfo.md)

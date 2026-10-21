@@ -1,16 +1,17 @@
 # SendVariantList(var: VariantList[, netid: int][, delay: int])
 
-Mengirim VariantList. Elemen `[0]` biasanya berisi nama event (mis. `OnTextOverlay`). Elemen berikutnya adalah argumen event. `netid` dan `delay` opsional sesuai kebutuhan.
+Sends a VariantList. Index `[0]` holds the event name, for example `OnTextOverlay`, and the
+following indexes are its arguments.
 
-Parameter
-- `var: VariantList`: Isi varian (tabel numerik berindeks 0..n).
-- `netid: int (opsional)`: NetID target.
-- `delay: int (opsional)`: Delay pengiriman (ms).
+Parameters
+- `var: VariantList`: the variant, a numeric table indexed from 0.
+- `netid: int (optional)`: target net id.
+- `delay: int (optional)`: send delay in milliseconds.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 SendVariantList({
   [0] = 'OnTextOverlay',

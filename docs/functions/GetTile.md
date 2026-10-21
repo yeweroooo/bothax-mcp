@@ -1,22 +1,23 @@
 # GetTile(x: int, y: int) -> Tile
 
-Mengambil info tile pada koordinat (x, y). Gunakan untuk membaca `fg/bg/flags/extra` pada sebuah tile tertentu. Fungsi ini tidak mengubah tile.
+Returns one tile, which is how you read `fg`, `bg`, `flags`, and `extra`. Reading a tile
+does not modify it.
 
-Parameter
-- `x: int`: Tile X.
-- `y: int`: Tile Y.
+Parameters
+- `x: int`: tile X.
+- `y: int`: tile Y.
 
-Nilai kembali
+Returns
 - `Tile`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local tile = GetTile(12, 12)
 if tile.fg == 242 then
-  LogToConsole('World Lock Found!')
+  LogToConsole('world lock found')
 end
 ```
 
-Terkait
+Related
 - [GetTiles](GetTiles.md)
 - [Tile](../structures/Tile.md)

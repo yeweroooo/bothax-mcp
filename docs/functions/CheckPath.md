@@ -1,20 +1,21 @@
 # CheckPath(tilex: int, tiley: int) -> boolean
 
-Mengecek apakah tile bisa dilalui. Berguna sebelum melakukan `FindPath` agar tidak melompat ke tile yang terhalang.
+Says whether the avatar can stand on a tile. Call it before `FindPath` so you do not send
+the avatar into a solid block.
 
-Parameter
-- `tilex: int`: Koordinat tile X.
-- `tiley: int`: Koordinat tile Y.
+Parameters
+- `tilex: int`: tile X.
+- `tiley: int`: tile Y.
 
-Nilai kembali
-- `true` jika jalur dapat dilalui, selain itu `false`.
+Returns
+- `true` when the tile is passable, `false` otherwise.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 if CheckPath(0, 0) then
   FindPath(0, 0)
 end
 ```
 
-Terkait
+Related
 - [FindPath](FindPath.md)

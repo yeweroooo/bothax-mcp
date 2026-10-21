@@ -1,16 +1,17 @@
 # GetInventory() -> Inventory[]
 
-Mengambil daftar item di inventaris pemain. Cocok untuk mengecek kepemilikan item tertentu atau membuat statistik inventaris.
+Returns the player's inventory. One entry per slot, so the same item can appear in several
+slots; sum `amount` when you need a total.
 
-Nilai kembali
-- Array `Inventory`: setiap entri berisi `id`, `amount`, `flags`.
+Returns
+- `Inventory[]`: each entry has `id`, `amount`, and `flags`.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 for _, item in pairs(GetInventory()) do
   LogToConsole('item id '.. item.id ..', amount '.. item.amount ..', flags '.. item.flags)
 end
 ```
 
-Terkait
+Related
 - [Inventory](../structures/Inventory.md)

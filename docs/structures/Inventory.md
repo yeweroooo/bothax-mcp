@@ -1,18 +1,19 @@
 # Inventory (id:int, amount:int, flags:int)
 
-Entri item di inventaris pemain. Setiap entri mewakili 1 slot: `id` item dan `amount` jumlah item pada slot tersebut.
+One inventory slot. The same item id can appear in several slots, so sum `amount` when you
+need the total a player owns.
 
-Bidang
-- `id: int`: ID item.
-- `amount: int`: Jumlah/quantity.
-- `flags: int`: Flag item pada slot.
+Fields
+- `id: int`: item id.
+- `amount: int`: quantity in this slot.
+- `flags: int`: slot flags.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 for _, it in pairs(GetInventory()) do
-  LogToConsole(('Item %d jumlah %d'):format(it.id, it.amount))
+  LogToConsole(('item %d amount %d'):format(it.id, it.amount))
 end
 ```
 
-Terkait
+Related
 - [GetInventory](../functions/GetInventory.md)

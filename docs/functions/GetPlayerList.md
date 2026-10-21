@@ -1,11 +1,11 @@
 # GetPlayerList() -> NetAvatar[]
 
-Mengambil daftar pemain lain yang terlihat/terload di world. Tidak termasuk diri Anda. Gunakan untuk iterasi nama/posisi pemain di sekitar.
+Returns the other players loaded around you. Your own avatar is not included.
 
-Nilai kembali
-- Array `NetAvatar`
+Returns
+- `NetAvatar[]`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 for _, plr in pairs(GetPlayerList()) do
   LogToConsole(('player %s at %d,%d')
@@ -13,6 +13,6 @@ for _, plr in pairs(GetPlayerList()) do
 end
 ```
 
-Terkait
+Related
 - [NetAvatar](../structures/NetAvatar.md)
 - [GetPlayer](GetPlayer.md)

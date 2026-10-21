@@ -1,14 +1,14 @@
 # GetLocal() -> NetAvatar
 
-Mengambil avatar pemain lokal. Cara cepat mengetahui posisi/nama Anda sendiri di world.
+Returns your own avatar. The quickest way to read your name, position, and netid.
 
-Nilai kembali
+Returns
 - `NetAvatar`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 LogToConsole('hello ' .. GetLocal().name)
 ```
 
-Terkait
+Related
 - [NetAvatar](../structures/NetAvatar.md)

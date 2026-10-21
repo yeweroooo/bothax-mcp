@@ -1518,9 +1518,9 @@ def api_list() -> str:
     structs = sorted(p.stem for p in (root / "structures").glob("*.md"))
     examples = sorted(p.name for p in root.glob("*.lua"))
     return (
-        f"FUNGSI ({len(funcs)}): {', '.join(funcs)}\n\n"
-        f"STRUKTUR ({len(structs)}): {', '.join(structs)}\n\n"
-        f"CONTOH: {', '.join(examples)}"
+        f"FUNCTIONS ({len(funcs)}): {', '.join(funcs)}\n\n"
+        f"STRUCTURES ({len(structs)}): {', '.join(structs)}\n\n"
+        f"EXAMPLES: {', '.join(examples)}"
     )
 
 

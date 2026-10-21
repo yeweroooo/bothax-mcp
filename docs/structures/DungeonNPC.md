@@ -1,16 +1,17 @@
 # DungeonNPC (x:int, y:int, state:int, flags:int, flags2:int)
 
-Data NPC khusus area/dungeon. Berisi status dan flag tambahan. Tidak selalu tersedia di semua world. Gunakan API yang relevan untuk mendapatkan daftar/objek DungeonNPC jika didukung oleh executor Anda.
+NPC data for dungeon areas, with its own state and flag fields. Not every world exposes it,
+so treat a missing list as normal rather than as an error.
 
-Bidang
-- `x: int`: Koordinat tile X.
-- `y: int`: Koordinat tile Y.
-- `state: int`: Status NPC saat ini.
-- `flags: int`: Bitmask status.
-- `flags2: int`: Bitmask tambahan.
+Fields
+- `x: int`: tile X.
+- `y: int`: tile Y.
+- `state: int`: current state.
+- `flags: int`: state bitmask.
+- `flags2: int`: secondary bitmask.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
--- Membaca state NPC dungeon di tile (x, y) jika tersedia via API terkait
--- (Tergantung fungsi yang memaparkan DungeonNPC dalam executor Anda)
+-- Reading dungeon NPC state needs the function that exposes it in your executor
+-- build; the fields above describe the table you get back.
 ```

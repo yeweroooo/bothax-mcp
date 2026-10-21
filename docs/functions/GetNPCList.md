@@ -1,17 +1,18 @@
 # GetNPCList() -> ClientNPC[]
 
-Mengambil daftar semua NPC aktif di world. Gunakan untuk scanning posisi NPC, atau mendeteksi keberadaan tipe NPC tertentu.
+Returns every NPC currently loaded in the world. Use it to scan positions or to find out
+whether a given NPC type is present.
 
-Nilai kembali
-- Array `ClientNPC`
+Returns
+- `ClientNPC[]`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 for _, npc in pairs(GetNPCList()) do
-  LogToConsole('Found NPC id: ' .. npc.id)
+  LogToConsole('found NPC id: ' .. npc.id)
 end
 ```
 
-Terkait
+Related
 - [ClientNPC](../structures/ClientNPC.md)
 - [GetNPC](GetNPC.md)

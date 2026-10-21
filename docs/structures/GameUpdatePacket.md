@@ -1,9 +1,11 @@
-# GameUpdatePacket (struct paket raw)
+# GameUpdatePacket (raw packet struct)
 
-Struktur paket mentah yang digunakan untuk event/pengiriman paket level rendah. Banyak bidang memiliki alias/nama alternatif tergantung konteks. Gunakan dengan hati-hati. Pastikan field yang dipakai sesuai tipe event agar tidak menimbulkan perilaku tak terduga.
+The structure behind raw packets. Several fields carry two names, and which one applies
+depends on `type`. A wrong combination is ignored at best and disconnects you at worst, so
+change one field at a time.
 
-Bidang (sesuai README)
-- `type: int`
+Fields
+- `type: int`: packet type.
 - `dropped: int`
 - `netid | player_flags: int`
 - `snetid | secondnetid: int`
@@ -19,12 +21,18 @@ Bidang (sesuai README)
 - `padding4: float`
 - `extrasize: int`
 
-Contoh penggunaan (Lua)
+Notes
+- Tile actions use `type = 3` with `value` set to the item id (place) or `18` (Fist,
+  break). Collecting uses `type = 11` with `value` set to the object oid and `px`/`py` set
+  to the object position.
+- `px` and `py` are tile coordinates, `x` and `y` are pixels. Sending the wrong pair is the
+  usual reason a packet does nothing.
+
+Example (Lua)
 ```lua
--- Mengirim paket raw (contoh sederhana)
 local pkt = { type = 10, value = 1796 }
 SendPacketRaw(false, pkt)
 ```
 
-Terkait
+Related
 - [SendPacketRaw](../functions/SendPacketRaw.md)

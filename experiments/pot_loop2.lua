@@ -23,23 +23,23 @@ local function punch(n)
     Sleep(300)
   end
 end
-if type(_POTLOOP) == 'table' and _POTLOOP.aktif then
-  return 'SUDAH_JALAN siklus=' .. tostring(_POTLOOP.siklus)
+if type(_POTLOOP) == 'table' and _POTLOOP.active then
+  return 'ALREADY_RUNNING cycles=' .. tostring(_POTLOOP.cycles)
 end
 ChangeValue('[A] Auto collect', true)
 _POTLOOP = {
-  aktif = true, selesai = false, siklus = 0, hits = 0, pulih = 0,
-  awal = inv(ITEM), sekarang = inv(ITEM), mulai = GetTick(), catatan = '',
+  active = true, finished = false, cycles = 0, hits = 0, recovered = 0,
+  start_inv = inv(ITEM), inv_now = inv(ITEM), started = GetTick(), note = '',
 }
 RunThread(function()
   while _POTLOOP and not _POTLOOP.stop do
     local n = inv(ITEM)
-    _POTLOOP.sekarang = n
+    _POTLOOP.inv_now = n
     if n <= 0 then break end
-    -- pemulihan: kalau tile masih berisi sesuatu, habiskan dulu
+    -- self-heal: clear whatever still sits on the tile before the next cycle
     if fg() ~= 0 then
-      _POTLOOP.pulih = _POTLOOP.pulih + 1
-      _POTLOOP.catatan = 'pulih: tile fg=' .. tostring(fg())
+      _POTLOOP.recovered = _POTLOOP.recovered + 1
+      _POTLOOP.note = 'recovering: tile fg=' .. tostring(fg())
       punch(12)
       Sleep(200)
     else
@@ -48,7 +48,7 @@ RunThread(function()
         x = p.x, y = p.y, xspeed = 0, yspeed = 0, px = TX, py = TY, extrasize = 0})
       Sleep(320)
       if fg() ~= ITEM then
-        _POTLOOP.catatan = 'place gagal fg=' .. tostring(fg())
+        _POTLOOP.note = 'place failed fg=' .. tostring(fg())
         Sleep(200)
       else
         local hits = 0
@@ -57,17 +57,17 @@ RunThread(function()
           hits = hits + 1
         end
         if fg() == ITEM then
-          _POTLOOP.catatan = 'blok tidak hancur setelah ' .. hits .. ' hit'
+          _POTLOOP.note = 'block did not break after ' .. hits .. ' hits'
         else
-          _POTLOOP.siklus = _POTLOOP.siklus + 1
-          _POTLOOP.catatan = ''
+          _POTLOOP.cycles = _POTLOOP.cycles + 1
+          _POTLOOP.note = ''
         end
         Sleep(200)
       end
     end
   end
-  _POTLOOP.aktif = false
-  _POTLOOP.selesai = true
-  _POTLOOP.sekarang = inv(ITEM)
+  _POTLOOP.active = false
+  _POTLOOP.finished = true
+  _POTLOOP.inv_now = inv(ITEM)
 end)
-return 'MULAI ulang awal=' .. tostring(_POTLOOP.awal)
+return 'START start_inv=' .. tostring(_POTLOOP.start_inv)

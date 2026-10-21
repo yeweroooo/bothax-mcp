@@ -1,19 +1,20 @@
 # GetObjectList() -> WorldObject[]
 
-Mengambil daftar objek dunia (drop, dll.) yang aktif. Gunakan untuk fitur auto-pickup atau menampilkan posisi drop spesifik.
+Returns the objects lying in the world, which is what drops look like from the client.
+Each object carries an `oid`; that oid, not the item id, is what a collect packet needs.
 
-Nilai kembali
-- Array `WorldObject`
+Returns
+- `WorldObject[]`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 for _, obj in pairs(GetObjectList()) do
   if obj.id == 242 then
-    LogToConsole(('Wolok di (%d,%d), jumlah %d')
+    LogToConsole(('world lock at (%d,%d), amount %d')
       :format(obj.pos.x // 32, obj.pos.y // 32, obj.amount))
   end
 end
 ```
 
-Terkait
+Related
 - [WorldObject](../structures/WorldObject.md)

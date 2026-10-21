@@ -1,18 +1,25 @@
 # FindPath(tilex: int, tiley: int)
 
-Teleport/jalan cepat ke tile tujuan. Pastikan tile dapat dilalui (lihat `CheckPath`) untuk menghindari stuck pada blok padat.
+Moves the avatar to a tile using the game's own pathing. Check the tile with `CheckPath`
+first; a solid target leaves the avatar where it was.
 
-Parameter
-- `tilex: int`: Koordinat tile X.
-- `tiley: int`: Koordinat tile Y.
+The move is the client's fast walk, not step-by-step animation, and it can take more than
+one tick to land. Read `GetLocal().pos` afterwards instead of assuming it worked.
 
-Nilai kembali
-- Tidak ada.
+Parameters
+- `tilex: int`: tile X.
+- `tiley: int`: tile Y.
 
-Contoh (Lua)
+Returns
+- Nothing.
+
+Example (Lua)
 ```lua
-FindPath(0, 0)
+if CheckPath(0, 0) then
+  FindPath(0, 0)
+end
 ```
 
-Terkait
+Related
 - [CheckPath](CheckPath.md)
+- [GetLocal](GetLocal.md)

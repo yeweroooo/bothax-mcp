@@ -1,29 +1,30 @@
 # ItemInfo (id:int, name:string, rarity:int, type:int, flags:int)
 
-Data lengkap item dari database item game. Berisi properti penting (nama, rarity, growtime, flags). Data bersumber dari database item yang dimuat klien.
+A full record from the item database. `breakhit` is the number of punches a block takes,
+which is what a break loop should count to.
 
-Bidang
-- `id: int`: ID item.
-- `name: string`: Nama item.
-- `filename: string`: Nama file/asset.
-- `rarity: int`: Tingkat kelangkaan.
-- `breakhit: int`: Hit break.
-- `growtime: int`: Waktu tumbuh (jika seed/tree).
-- `type: int`: Tipe item.
-- `coltype: int`: Collision type.
-- `clothingtype: int`: Tipe pakaian (jika apparel).
-- `visualstyle: int`: Gaya visual.
-- `texturex: int`: Koordinat tekstur X.
-- `texturey: int`: Koordinat tekstur Y.
-- `flags: int`: Flag item.
+Fields
+- `id: int`: item id.
+- `name: string`: item name.
+- `filename: string`: asset name.
+- `rarity: int`: rarity.
+- `breakhit: int`: hits needed to break the block.
+- `growtime: int`: grow time for seeds and trees.
+- `type: int`: item type.
+- `coltype: int`: collision type.
+- `clothingtype: int`: clothing type, for wearables.
+- `visualstyle: int`: visual style.
+- `texturex: int`: texture X.
+- `texturey: int`: texture Y.
+- `flags: int`: item flags.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local info = GetItemInfo('World Lock')
-LogToConsole(('ID %d, rarity %d'):format(info.id, info.rarity))
+LogToConsole(('id %d, rarity %d'):format(info.id, info.rarity))
 ```
 
-Terkait
+Related
 - [GetItemInfo](../functions/GetItemInfo.md)
 - [GetItemByIDSafe](../functions/GetItemByIDSafe.md)
 - [GetItemByName](../functions/GetItemByName.md)

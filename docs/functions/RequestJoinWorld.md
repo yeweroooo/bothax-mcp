@@ -1,14 +1,18 @@
 # RequestJoinWorld(worldname: string)
 
-Meminta pindah ke world tertentu (setara perintah `/join`/`/wp`). Men-trigger proses perpindahan dunia seperti mengetik perintah di chat. Pastikan nama world valid.
+Asks the server to move you to a world, the same thing `/join` does when typed in chat. The
+move happens asynchronously; poll `GetWorld().name` if you need to confirm it.
 
-Parameter
-- `worldname: string`: Nama world.
+Parameters
+- `worldname: string`: world name.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 RequestJoinWorld('START')
 ```
+
+Related
+- [GetWorld](GetWorld.md)

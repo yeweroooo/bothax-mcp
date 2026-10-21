@@ -1,30 +1,35 @@
 # Tile (fg:int, bg:int, flags:TileFlags, extra:TileExtra|nil, x:int, y:int)
 
-Informasi tile (blok) di dunia. `fg` adalah blok depan, `bg` blok belakang. `flags` menyimpan kondisi khusus (mis. locked, public); `extra` berisi data tambahan bila ada.
+A block in the world. `fg` is the foreground block and `bg` the background wall. `flags`
+carries special conditions such as locked or public, and `extra` holds extra data when the
+tile has any.
 
-Bidang
-- `fg: int`: Foreground ID.
-- `bg: int`: Background ID.
-- `collidable: boolean`: Apakah bisa ditabrak/dipijak.
-- `x: int`: Koordinat tile X.
-- `y: int`: Koordinat tile Y.
-- `coltype: int`: Collision type.
-- `locktile: int`: Info lock (jika ada).
-- `flags: TileFlags`: Kumpulan flag tile.
-- `extra: TileExtra | nil`: Data tambahan (bisa `nil`).
+`fg = 0` means an empty tile, which is how you confirm a block was broken.
 
-Catatan
-- Beberapa contoh menggunakan `tile.pos.x`/`tile.pos.y`. Jika tidak ada field `pos`, gunakan `x` dan `y` langsung.
+Fields
+- `fg: int`: foreground item id.
+- `bg: int`: background item id.
+- `collidable: boolean`: whether it blocks movement.
+- `x: int`: tile X.
+- `y: int`: tile Y.
+- `coltype: int`: collision type.
+- `locktile: int`: lock info, when present.
+- `flags: TileFlags`: tile flags.
+- `extra: TileExtra | nil`: extra data, often `nil`.
 
-Contoh penggunaan (Lua)
+Notes
+- Some examples in the wild use `tile.pos.x`. If the table has no `pos`, read `x` and `y`
+  directly.
+
+Example (Lua)
 ```lua
 local t = GetTile(12, 12)
 if t.fg == 242 then
-  LogToConsole('World Lock ditemukan!')
+  LogToConsole('world lock found')
 end
 ```
 
-Terkait
+Related
 - [GetTile](../functions/GetTile.md)
 - [GetTiles](../functions/GetTiles.md)
 - [TileFlags](../structures/TileFlags.md)

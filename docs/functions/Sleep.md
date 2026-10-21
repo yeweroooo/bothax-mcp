@@ -1,16 +1,21 @@
 # Sleep(milliseconds: int)
 
-Menghentikan eksekusi thread saat ini sementara (blocking) selama ms. Bersifat blocking pada thread berjalan. Jangan dipakai di callback yang sensitif frame (mis. `OnDraw`), gunakan `RunDelayed`/`RunThread` bila perlu non-blocking.
+Pauses the current thread for the given time. It blocks, so never call it from a
+frame-sensitive callback such as `OnDraw`; use `RunDelayed` or `RunThread` there.
 
-Parameter
-- `milliseconds: int`
+Parameters
+- `milliseconds: int`: how long to wait.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
-LogToConsole('Hai')
+LogToConsole('hi')
 Sleep(1000)
-LogToConsole('Hai Juga')
+LogToConsole('hi again')
 ```
+
+Related
+- [RunDelayed](RunDelayed.md)
+- [RunThread](RunThread.md)

@@ -1,21 +1,22 @@
 # PlayerItems (gems:int, backpack:table)
 
-Data item terkait pemain: jumlah gems dan konfigurasi backpack. Cocok untuk membaca saldo gems dan info ransel (ukuran, slot terpilih) tanpa perlu parsing paket manual.
+Player-owned data: gem balance and backpack configuration. Read it instead of parsing
+packets when you only need the numbers.
 
-Bidang
-- `gems: int`: Saldo gems pemain.
-- `backpack: table`: Info ransel:
-  - `priority: int[]`: Urutan prioritas slot.
-  - `size: int`: Ukuran ransel maksimal.
-  - `selected: int`: Slot/item terpilih.
+Fields
+- `gems: int`: gem balance.
+- `backpack: table`: backpack info:
+  - `priority: int[]`: slot priority order.
+  - `size: int`: maximum backpack size.
+  - `selected: int`: currently selected slot.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local p = GetPlayerInfo()
-LogToConsole(('Gems: %d, Backpack size: %d')
+LogToConsole(('gems: %d, backpack size: %d')
   :format(p.gems, p.backpack.size))
 ```
 
-Terkait
+Related
 - [GetPlayerInfo](../functions/GetPlayerInfo.md)
 - [GetPlayerItems](../functions/GetPlayerItems.md)

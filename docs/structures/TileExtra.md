@@ -1,8 +1,9 @@
 # TileExtra (type:int, label:string, owner:int, color:uint, ...)
 
-Data tambahan sebuah tile (label, owner, warna, progres, dsb.). `extra` tidak selalu ada. Cek dulu `if t.extra then ... end` sebelum mengakses field-nya.
+Extra data attached to a tile: labels, owner, colour, progress, and similar. It is often
+absent, so test `if t.extra then` before reading a field.
 
-Bidang
+Fields
 - `type: int`
 - `progress: float`
 - `label: string`
@@ -18,13 +19,13 @@ Bidang
 - `volume: int`
 - `color: uint`
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local t = GetTile(10, 10)
 if t.extra and t.extra.owner then
-  LogToConsole(('Tile dimiliki UID: %d'):format(t.extra.owner))
+  LogToConsole(('tile owned by UID %d'):format(t.extra.owner))
 end
 ```
 
-Terkait
+Related
 - [Tile](../structures/Tile.md)

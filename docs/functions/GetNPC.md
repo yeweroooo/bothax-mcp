@@ -1,23 +1,23 @@
 # GetNPC(id: int) -> ClientNPC | nil
 
-Mengambil NPC tertentu berdasarkan ID. Kembalikan `nil` jika ID tidak valid atau NPC tidak ada di world saat ini.
+Returns one NPC by id, or `nil` when the id is unknown or the NPC is not loaded.
 
-Parameter
-- `id: int`: ID NPC.
+Parameters
+- `id: int`: NPC id.
 
-Nilai kembali
-- `ClientNPC` jika ditemukan, jika tidak maka `nil`.
+Returns
+- `ClientNPC` when found, otherwise `nil`.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local npc = GetNPC(1)
 if npc then
-  LogToConsole('NPC tipe => ' .. npc.type)
+  LogToConsole('NPC type => ' .. npc.type)
 else
-  LogToConsole('Not Found!')
+  LogToConsole('not found')
 end
 ```
 
-Terkait
+Related
 - [ClientNPC](../structures/ClientNPC.md)
 - [GetNPCList](GetNPCList.md)

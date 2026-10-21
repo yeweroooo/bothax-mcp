@@ -1,14 +1,15 @@
 # GetItemsByPartialName(partial: string) -> ItemInfo[]
 
-Pencarian item berdasarkan nama sebagian (case-insensitive). Berguna untuk fitur pencarian/auto-complete saat Anda tidak tahu nama lengkap item.
+Searches items by a name fragment, case insensitive. Built for search boxes and
+auto-complete where the full name is unknown.
 
-Parameter
-- `partial: string`: Potongan nama item.
+Parameters
+- `partial: string`: part of an item name.
 
-Nilai kembali
-- Array `ItemInfo`
+Returns
+- `ItemInfo[]`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local items = GetItemsByPartialName('Dirt')
 for _, it in pairs(items) do
@@ -16,5 +17,5 @@ for _, it in pairs(items) do
 end
 ```
 
-Terkait
+Related
 - [ItemInfo](../structures/ItemInfo.md)

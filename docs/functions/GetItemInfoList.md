@@ -1,18 +1,19 @@
 # GetItemInfoList() -> ItemInfo[]
 
-Mengambil seluruh daftar item dari database item. Daftar bisa sangat besar. Filter dengan kondisi agar lebih efisien.
+Returns the whole item database. The list is large, so filter while iterating instead of
+building extra copies.
 
-Nilai kembali
-- Array `ItemInfo`
+Returns
+- `ItemInfo[]`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 for _, item in pairs(GetItemInfoList()) do
   if item.id == 2 then
-    LogToConsole('Rarity ' .. GetItemInfo(2).name .. ' => ' .. item.rarity)
+    LogToConsole('Rarity ' .. item.name .. ' => ' .. item.rarity)
   end
 end
 ```
 
-Terkait
+Related
 - [ItemInfo](../structures/ItemInfo.md)

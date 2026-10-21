@@ -39,7 +39,7 @@ for _, o in pairs(GetObjectList()) do
   list[#list + 1] = tostring(o.id) .. 'x' .. tostring(o.amount)
 end
 local out = {
-  string.format('item=%s breakhit=%s placed=%s hits=%d objs %d->%d [%s] paket=%d',
+  string.format('item=%s breakhit=%s placed=%s hits=%d objs %d->%d [%s] packets=%d',
     tostring(info and info.name), tostring(info and info.breakhit), tostring(placed),
     hits, obj0, obj1, table.concat(list, ','), #_PKT4),
 }

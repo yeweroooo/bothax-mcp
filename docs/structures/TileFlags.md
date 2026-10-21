@@ -1,9 +1,10 @@
 # TileFlags (value:int, locked:boolean, public:boolean, water:boolean, ...)
 
-Flag/penanda kondisi khusus pada tile. Representasi kondisi tile dalam bentuk boolean/bitmask. Ubah nilai flag dengan fungsi `SetTileFlags`.
+Special conditions on a tile, readable as named booleans or as one bitmask in `value`. Write
+them with `SetTileFlags`.
 
-Bidang
-- `value: int`: Nilai bitmask keseluruhan.
+Fields
+- `value: int`: the whole bitmask.
 - `locked: boolean`
 - `spliced: boolean`
 - `dropseed: boolean`
@@ -19,7 +20,7 @@ Bidang
 - `green: boolean`
 - `blue: boolean`
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 SetTileFlags(10, 5, 16384)
 SetTileFlags(15, 8, {
@@ -29,6 +30,6 @@ SetTileFlags(15, 8, {
 })
 ```
 
-Terkait
+Related
 - [SetTileFlags](../functions/SetTileFlags.md)
 - [Tile](../structures/Tile.md)

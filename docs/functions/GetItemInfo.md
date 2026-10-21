@@ -1,20 +1,20 @@
 # GetItemInfo(item: int|string) -> ItemInfo
 
-Mengambil data item berdasarkan ID atau nama. Lebih fleksibel karena menerima ID maupun nama. Cocok untuk lookup cepat sebelum menampilkan info item.
+Looks an item up by id or by name. The flexible version of the two typed lookups.
 
-Parameter
-- `item: int|string`: ID atau nama item.
+Parameters
+- `item: int|string`: item id or item name.
 
-Nilai kembali
+Returns
 - `ItemInfo`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 LogToConsole(GetItemInfo(242).name)
 LogToConsole(GetItemInfo('World Lock').id)
 ```
 
-Terkait
+Related
 - [ItemInfo](../structures/ItemInfo.md)
 - [GetItemByIDSafe](GetItemByIDSafe.md)
 - [GetItemByName](GetItemByName.md)

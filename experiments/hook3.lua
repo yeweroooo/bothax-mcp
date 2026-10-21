@@ -1,5 +1,5 @@
 -- AddHook called from inside RunThread.
--- Result: string label 0 events, numeric label 1 event.
+-- Result: string label 0 events, numeric label 1 event. The string label stays as the probe.
 _PKT3 = {}
 RunThread(function()
   AddHook('OnSendPacketRaw', 'rec3', function(p)
@@ -12,4 +12,4 @@ RunThread(function()
   Sleep(8000)
   RemoveHook('rec3')
 end)
-return 'hook dipasang di thread'
+return 'hook installed inside a thread'

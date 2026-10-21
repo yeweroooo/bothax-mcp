@@ -1,20 +1,22 @@
-# EncryptFile
+# EncryptFile(filename: string[, key: int])
 
-Mengenkripsi file dari folder script. Hasil disimpan sebagai `(filename)_enc`. Gunakan untuk mengamankan isi script sebelum dibagikan. File hasil dapat dieksekusi dengan `LoadEncryptedFile`.
+Encrypts a file from the script folder. The result is written next to it with an `_enc`
+suffix, and runs through `LoadEncryptedFile`. Useful for handing a script to someone
+without exposing its source.
 
-Parameter
-- `filename: string`: Nama file di folder script.
-- `key: int (opsional)`: Kunci enkripsi.
+Parameters
+- `filename: string`: file name inside the script folder.
+- `key: int (optional)`: encryption key.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 EncryptFile('script.lua')
 EncryptFile('script.lua', 123)
 ```
 
-Terkait
+Related
 - [LoadEncryptedFile](LoadEncryptedFile.md)
 - [Encrypt](Encrypt.md)

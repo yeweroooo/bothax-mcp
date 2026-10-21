@@ -1,16 +1,17 @@
 # GetClient() -> ENetClient
 
-Mendapatkan info koneksi ENet saat ini. Bantu diagnosa jaringan (alamat server dan ping) saat fitur Anda bergantung pada koneksi stabil.
+Returns the current ENet connection. Use it when a feature depends on a stable link and
+you want to show or log the server address and ping.
 
-Nilai kembali
+Returns
 - `ENetClient`: address, port, ping.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local client = GetClient()
 LogToConsole("Connected to: " .. client.address .. ":" .. client.port)
 LogToConsole("Ping: " .. client.ping .. "ms")
 ```
 
-Terkait
+Related
 - [ENetClient](../structures/ENetClient.md)

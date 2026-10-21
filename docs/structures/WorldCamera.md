@@ -1,19 +1,20 @@
 # WorldCamera (pos:Vec2, center:Vec2, scale:float, resolution:Vec2)
 
-Informasi kamera dunia di klien. Berguna untuk menempatkan overlay/UI (ImGui) atau fitur ESP pada posisi yang tepat.
+The client's world camera. Needed to put an overlay, label, or ESP marker where the player
+actually sees it.
 
-Bidang
-- `pos: Vec2`: Posisi kamera (pixel).
-- `center: Vec2`: Titik tengah tampilan.
-- `scale: float`: Skala zoom.
-- `resolution: Vec2`: Resolusi tampilan.
+Fields
+- `pos: Vec2`: camera position in pixels.
+- `center: Vec2`: centre of the view.
+- `scale: float`: zoom.
+- `resolution: Vec2`: view resolution.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local cam = GetCamera()
-LogToConsole(('Camera pos: %.1f, %.1f')
+LogToConsole(('camera pos: %.1f, %.1f')
   :format(cam.pos.x, cam.pos.y))
 ```
 
-Terkait
+Related
 - [GetCamera](../functions/GetCamera.md)

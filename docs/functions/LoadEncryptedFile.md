@@ -1,18 +1,18 @@
 # LoadEncryptedFile(filename: string)
 
-Menjalankan file terenkripsi dari folder script. Pasangan dari `EncryptFile`. Pastikan nama file benar dan telah terenkripsi.
+Runs an encrypted file from the script folder. The partner of `EncryptFile`.
 
-Parameter
-- `filename: string`: Nama file terenkripsi.
+Parameters
+- `filename: string`: name of the encrypted file.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 LoadEncryptedFile('script.lua')
 ```
 
-Terkait
+Related
 - [EncryptFile](EncryptFile.md)
 - [LoadEncrypt](LoadEncrypt.md)

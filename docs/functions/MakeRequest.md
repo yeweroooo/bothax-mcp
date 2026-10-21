@@ -1,25 +1,30 @@
 # MakeRequest(url: string[, method: string][, headers: table][, content: string][, timeout_ms: int]) -> HttpResponse
 
-Melakukan permintaan HTTP dan mengembalikan `HttpResponse`. Periksa `status` dan `error` pada hasil untuk memastikan request sukses sebelum memproses `content`. `headers` berupa table key->value (mis. `{ ['Content-Type'] = 'application/json' }`). `content` digunakan untuk body saat metode seperti `POST/PUT`.
+Performs an HTTP request. Check `error` and `content` on the result before parsing; this
+build returns `status = 0` for a successful request, so the numeric status is not a
+reliable success signal.
 
-Parameter
-- `url: string`
-- `method: string (opsional)`: Default biasanya `GET`.
-- `headers: table (opsional)`: Header HTTP.
-- `content: string (opsional)`: Body (untuk POST/PUT, dll.).
-- `timeout_ms: int (opsional)`: Timeout milidetik.
+`headers` is a key to value table, for example `{ ['Content-Type'] = 'text/plain' }`.
+`content` is the body for `POST` and `PUT`.
 
-Nilai kembali
-- `HttpResponse`: berisi status, error, method, content.
+Parameters
+- `url: string`: target URL.
+- `method: string (optional)`: defaults to `GET`.
+- `headers: table (optional)`: HTTP headers.
+- `content: string (optional)`: request body.
+- `timeout_ms: int (optional)`: timeout in milliseconds.
 
-Contoh (Lua)
+Returns
+- `HttpResponse`: status, error, method, content.
+
+Example (Lua)
 ```lua
 local res = MakeRequest('https://growtopiagame.com/detail', 'GET')
-if not res.error and res.status == 200 then
+if not res.error and res.content then
   local online = tonumber(res.content:match('"online_user":"(%d+)"'))
-  if online then LogToConsole('Current User Online : ' .. online) end
+  if online then LogToConsole('current users online : ' .. online) end
 end
 ```
 
-Terkait
+Related
 - [HttpResponse](../structures/HttpResponse.md)

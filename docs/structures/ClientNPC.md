@@ -1,25 +1,26 @@
 # ClientNPC (id:int, type:int, pos:Vec2, target:Vec2)
 
-Representasi NPC (Non-Player Character) yang terlihat di sisi klien. Berguna untuk membaca posisi, tipe, dan target pergerakan NPC. Koordinat `pos`/`target` dalam pixel. Untuk ubah ke tile gunakan pembulatan `// 32`.
+An NPC as the client sees it. Read it for position, type, and the point it is walking
+towards. `pos` and `target` are pixels; divide by 32 for tiles.
 
-Bidang
-- `id: int`: ID unik NPC di dunia saat ini.
-- `type: int`: Tipe/jenis NPC.
-- `pos: Vec2`: Posisi NPC dalam koordinat pixel.
-- `target: Vec2`: Posisi tujuan NPC (pixel).
+Fields
+- `id: int`: NPC id in the current world.
+- `type: int`: NPC type.
+- `pos: Vec2`: current position in pixels.
+- `target: Vec2`: target position in pixels.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local npc = GetNPC(1)
 if npc then
-  LogToConsole(('NPC %d tipe %d di (%d,%d)')
+  LogToConsole(('NPC %d type %d at (%d,%d)')
     :format(npc.id, npc.type, npc.pos.x // 32, npc.pos.y // 32))
 else
-  LogToConsole('NPC tidak ditemukan')
+  LogToConsole('NPC not found')
 end
 ```
 
-Terkait
+Related
 - [GetNPC](../functions/GetNPC.md)
 - [GetNPCList](../functions/GetNPCList.md)
 - [Vec2](../structures/Vec2.md)

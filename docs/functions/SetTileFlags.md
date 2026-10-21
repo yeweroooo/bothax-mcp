@@ -1,21 +1,21 @@
 # SetTileFlags(tileX: int, tileY: int, flags: int | TileFlags)
 
-Mengatur flag tile pada koordinat tertentu. Bisa menggunakan bitmask `int` atau tabel `TileFlags`. Pastikan koordinat tile sesuai target yang diinginkan.
+Sets tile flags at a coordinate, either as an integer bitmask or as a `TileFlags` table.
 
-Parameter
-- `tileX: int`: Koordinat X tile.
-- `tileY: int`: Koordinat Y tile.
-- `flags: int | TileFlags`: Bitmask integer atau tabel `TileFlags`.
+Parameters
+- `tileX: int`: tile X.
+- `tileY: int`: tile Y.
+- `flags: int | TileFlags`: bitmask or flag table.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
--- Dengan bitmask
+-- bitmask
 SetTileFlags(10, 5, 16384)
 
--- Dengan tabel flag
+-- flag table
 SetTileFlags(15, 8, {
   locked = true,
   public = true,
@@ -23,6 +23,6 @@ SetTileFlags(15, 8, {
 })
 ```
 
-Terkait
+Related
 - [TileFlags](../structures/TileFlags.md)
 - [GetTile](GetTile.md)

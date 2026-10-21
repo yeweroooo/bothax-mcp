@@ -1,5 +1,5 @@
 -- Numeric versus string hook labels, second attempt.
--- Result: a string label registers no callback at all.
+-- Result: a string label registers no callback at all. Kept as-is on purpose.
 _PKT2 = {}
 local function one(p)
   if type(_PKT2) ~= 'table' or #_PKT2 >= 300 then return end
@@ -12,11 +12,11 @@ end
 AddHook('OnSendPacketRaw', 'rec2', function(p) pcall(one, p) end)
 Sleep(7000)
 RemoveHook('rec2')
-local uniq, urut = {}, {}
+local counts, ordered = {}, {}
 for _, s in ipairs(_PKT2) do
-  if not uniq[s] then uniq[s] = 0; urut[#urut + 1] = s end
-  uniq[s] = uniq[s] + 1
+  if not counts[s] then counts[s] = 0; ordered[#ordered + 1] = s end
+  counts[s] = counts[s] + 1
 end
 local out = { 'total=' .. #_PKT2 }
-for _, s in ipairs(urut) do out[#out + 1] = uniq[s] .. 'x ' .. s end
+for _, s in ipairs(ordered) do out[#out + 1] = counts[s] .. 'x ' .. s end
 return out

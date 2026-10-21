@@ -10,7 +10,7 @@ LogToConsole("[p2] " .. table.concat({
   t("RunThread"), t("GetTick"), t("GetWorld"), t("AddHook"),
 }, " "))
 
--- tabel yang mungkin membungkus API
+-- tables that might wrap the API
 local tnames = {}
 for _, n in ipairs({ "game", "gt", "api", "mod", "bothax", "Native", "http", "net", "socket", "curl", "Http" }) do
   local ok, v = pcall(function() return _G[n] end)
@@ -22,9 +22,9 @@ for _, n in ipairs({ "game", "gt", "api", "mod", "bothax", "Native", "http", "ne
     tnames[#tnames + 1] = n
   end
 end
-if #tnames == 0 then LogToConsole("[p2] tidak ada tabel API global") end
+if #tnames == 0 then LogToConsole("[p2] no global API tables") end
 
--- global fungsi yang mengandung kata kunci menarik
+-- global functions whose name looks interesting
 local hits = {}
 for k, v in pairs(_G) do
   if type(v) == "function" then
@@ -35,4 +35,4 @@ for k, v in pairs(_G) do
   end
 end
 table.sort(hits)
-LogToConsole("[p2] fungsi cocok (" .. #hits .. "): " .. table.concat(hits, " ", 1, math.min(#hits, 20)))
+LogToConsole("[p2] matching functions (" .. #hits .. "): " .. table.concat(hits, " ", 1, math.min(#hits, 20)))

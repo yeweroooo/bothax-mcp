@@ -1,20 +1,21 @@
 # HttpResponse (status:int, error:boolean, method:string, content:string)
 
-Hasil permintaan HTTP dari `MakeRequest`. Periksa `error` dan `status` untuk memastikan permintaan berhasil sebelum memproses `content`.
+The result of a `MakeRequest` call. This build reports `status = 0` for a successful
+request, so check `error` and `content` rather than the status code.
 
-Bidang
-- `status: int`: Kode status HTTP (200, 404, dst).
-- `error: boolean`: Apakah terjadi error.
-- `method: string`: Metode yang digunakan (GET/POST/dll.).
-- `content: string`: Konten/body respon.
+Fields
+- `status: int`: HTTP status, when the build reports one.
+- `error: boolean`: whether the request failed.
+- `method: string`: method used, GET or POST.
+- `content: string`: response body.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local res = MakeRequest('https://growtopiagame.com/detail', 'GET')
-if not res.error and res.status == 200 then
-  LogToConsole('Panjang konten: ' .. #res.content)
+if not res.error and res.content then
+  LogToConsole('content length: ' .. #res.content)
 end
 ```
 
-Terkait
+Related
 - [MakeRequest](../functions/MakeRequest.md)

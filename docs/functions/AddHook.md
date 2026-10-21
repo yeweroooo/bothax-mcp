@@ -1,28 +1,31 @@
 # AddHook(event: string, label: int|string, callback: function)
 
-Mendaftarkan callback untuk sebuah event BothaxHook. Lengkapi `label` unik agar mudah dihapus dengan `RemoveHook`. Kembalikan `true` di callback untuk memblokir event tertentu.
+Registers a callback for one BothaxHook event. Give `label` a unique value so
+`RemoveHook` can find it again. Returning `true` from the callback blocks that event.
 
-Parameter
-- `event: string`: Nama event, mis. `OnVariant`, `OnSendPacket`, dll.
-- `label: int|string`: Label/ID hook (dipakai untuk `RemoveHook`).
-- `callback: function`: Fungsi yang dipanggil saat event terjadi.
+Parameters
+- `event: string`: event name, such as `OnVariant` or `OnSendPacket`.
+- `label: int|string`: hook id used by `RemoveHook`. Use a number: string labels have been
+  observed to register no callback at all.
+- `callback: function`: called whenever the event fires.
 
-Nilai kembali
-- Tidak mengembalikan nilai. Identitas hook ditentukan dari `label` yang Anda berikan.
+Returns
+- Nothing. The hook is identified by the label you passed in.
 
-Catatan
-- Mengembalikan `true` di callback biasanya akan memblokir/menelan event.
+Notes
+- Returning `true` from the callback swallows the event.
+- A failed string-label attempt can leave existing hooks dead until the game restarts.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 AddHook('OnSendPacket', 101, function(type, text)
   if text:find('/hi') then
-    LogToConsole('Halo!')
+    LogToConsole('hello!')
     return true
   end
 end)
 ```
 
-Terkait
+Related
 - [BothaxHook](BothaxHook.md)
 - [RemoveHook](RemoveHook.md) / [RemoveHooks](RemoveHooks.md)

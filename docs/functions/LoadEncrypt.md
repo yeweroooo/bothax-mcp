@@ -1,19 +1,20 @@
 # LoadEncrypt(encryptedText: string)
 
-Menjalankan teks terenkripsi sebagai script Lua. Pasangan dari `Encrypt`. Memungkinkan mengeksekusi script tanpa mengekspose isi asli.
+Runs encrypted text as a Lua script. The partner of `Encrypt`, which lets you ship code
+without exposing its source.
 
-Parameter
-- `encryptedText: string`: String terenkripsi.
+Parameters
+- `encryptedText: string`: encrypted script text.
 
-Nilai kembali
-- Tidak ada (eksekusi terjadi di dalam fungsi).
+Returns
+- Nothing; the script runs inside the call.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local script = Encrypt("LogToConsole('hello world!')")
 LoadEncrypt(script)
 ```
 
-Terkait
+Related
 - [Encrypt](Encrypt.md)
 - [LoadEncryptedFile](LoadEncryptedFile.md)

@@ -1,18 +1,19 @@
 # Hash64(text: string[, seed: uint64]) -> number
 
-Menghasilkan hash FNV-1a 64-bit. Sama seperti `Hash32` namun dengan ruang nilai lebih besar (64-bit), cocok untuk mengurangi kemungkinan tabrakan pada dataset besar.
+Returns a 64-bit FNV-1a hash. Same idea as `Hash32` with a wider space, which lowers
+collision odds on large datasets.
 
-Parameter
-- `text: string`
-- `seed: uint64 (opsional)`
+Parameters
+- `text: string`: input string.
+- `seed: uint64 (optional)`: extra seed.
 
-Nilai kembali
-- `number`: Nilai hash 64-bit.
+Returns
+- `number`: 64-bit hash.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local h = Hash64('bothax')
 LogToConsole('hash64 : ' .. tostring(h))
 local hs = Hash64('bothax', 987654321)
-LogToConsole('hash64 w/seed : ' .. tostring(hs))
+LogToConsole('hash64 with seed : ' .. tostring(hs))
 ```

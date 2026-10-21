@@ -1,19 +1,24 @@
 # RunThread(callback: function, ...)
 
-Menjalankan fungsi secara asynchronous (thread terpisah), tidak memblokir thread utama. Hindari operasi UI langsung di thread terpisah. Gunakan untuk tugas I/O, perhitungan, atau loop yang lama.
+Runs a function on its own thread, so long work does not block the main one. Do not touch
+the UI from inside it; hand results back with `RunDelayed` if you have to.
 
-Parameter
-- `callback: function`: Fungsi yang dieksekusi di thread baru.
-- `...: any`: Argumen tambahan (opsional).
+Parameters
+- `callback: function`: function to run.
+- `...: any`: extra arguments, optional.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 RunThread(function(id)
-  LogToConsole('Running Thread For ID : ' .. id)
+  LogToConsole('running thread for id : ' .. id)
   Sleep(2000)
-  LogToConsole('Finished Thread For ID : ' .. id)
+  LogToConsole('finished thread for id : ' .. id)
 end, 1)
 ```
+
+Related
+- [RunDelayed](RunDelayed.md)
+- [Sleep](Sleep.md)

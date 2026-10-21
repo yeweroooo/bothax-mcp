@@ -1,21 +1,19 @@
-# RemoveHook
+# RemoveHook(hook_id: int|string)
 
-Menghapus hook berdasarkan ID/label yang dipakai di `AddHook`. Gunakan untuk menonaktifkan satu hook tertentu tanpa mempengaruhi hook lain.
+Removes one hook by the label used in `AddHook`, without touching the others.
 
-Parameter
-- `hook_id: int|string`: Sama dengan label yang diberikan saat `AddHook`.
+Parameters
+- `hook_id: int|string`: the same label you passed to `AddHook`.
 
-Nilai kembali
-- Tidak ada.
+Returns
+- Nothing.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 AddHook('OnSendPacket', 123, function(_, str) LogToConsole(str) end)
 RemoveHook(123)
-AddHook('OnSendPacket', 'hai', function(_, str) LogToConsole(str) end)
-RemoveHook('hai')
 ```
 
-Terkait
+Related
 - [AddHook](AddHook.md)
 - [RemoveHooks](RemoveHooks.md)

@@ -10,12 +10,12 @@ end
 AddHook('OnSendPacketRaw', 'rec_collect', function(pkt) pcall(rec, pkt) end)
 Sleep(7000)
 RemoveHook('rec_collect')
-local jumlah = #_PKT
-local uniq, urut = {}, {}
+local total = #_PKT
+local counts, ordered = {}, {}
 for _, s in ipairs(_PKT) do
-  if not uniq[s] then uniq[s] = 0; urut[#urut + 1] = s end
-  uniq[s] = uniq[s] + 1
+  if not counts[s] then counts[s] = 0; ordered[#ordered + 1] = s end
+  counts[s] = counts[s] + 1
 end
-local out = { 'total=' .. jumlah .. ' unik=' .. #urut }
-for _, s in ipairs(urut) do out[#out + 1] = uniq[s] .. 'x ' .. s end
+local out = { 'total=' .. total .. ' unique=' .. #ordered }
+for _, s in ipairs(ordered) do out[#out + 1] = counts[s] .. 'x ' .. s end
 return out

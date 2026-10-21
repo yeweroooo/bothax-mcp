@@ -5,7 +5,7 @@ local nobj = 0
 for _ in pairs(GetObjectList()) do nobj = nobj + 1 end
 local L = _POTLOOP or {}
 local pos = GetLocal().pos
-return string.format('aktif=%s selesai=%s siklus=%d inv=%s/%s hits=%d lewat=%d gems=%s objs=%d pos=%d,%d catatan=%s',
-  tostring(L.aktif), tostring(L.selesai), tonumber(L.siklus) or 0,
-  tostring(L.sekarang), tostring(L.awal), tonumber(L.hits) or 0, tonumber(L.lewat) or 0,
-  gems, nobj, math.floor(pos.x / 32), math.floor(pos.y / 32), tostring(L.catatan))
+return string.format('active=%s finished=%s cycles=%d inv=%s/%s hits=%d skipped=%d gems=%s objs=%d pos=%d,%d note=%s',
+  tostring(L.active), tostring(L.finished), tonumber(L.cycles) or 0,
+  tostring(L.inv_now), tostring(L.start_inv), tonumber(L.hits) or 0, tonumber(L.skipped) or 0,
+  gems, nobj, math.floor(pos.x / 32), math.floor(pos.y / 32), tostring(L.note))

@@ -1,19 +1,20 @@
 # Vec2 (x:float, y:float)
 
-Vektor 2D sederhana. Umumnya dipakai untuk `pos` dalam pixel di berbagai struktur (avatar, kamera, objek).
+A 2D vector, used for pixel positions in avatar, camera, and object structures. One tile is
+32 pixels.
 
-Bidang
-- `x: float`: Sumbu X.
-- `y: float`: Sumbu Y.
+Fields
+- `x: float`: X axis.
+- `y: float`: Y axis.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local me = GetLocal()
 local pos = me.pos -- Vec2
 LogToConsole(('(%d,%d)'):format(pos.x // 32, pos.y // 32))
 ```
 
-Terkait
+Related
 - [NetAvatar](../structures/NetAvatar.md)
 - [WorldCamera](../structures/WorldCamera.md)
 - [WorldObject](../structures/WorldObject.md)

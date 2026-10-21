@@ -1,16 +1,16 @@
 # GetPlayerItems() -> PlayerItems
 
-Alias dari `GetPlayerInfo()`. Berisi `gems` dan informasi ransel. Sama dengan `GetPlayerInfo()`.
+Alias for `GetPlayerInfo()`. Returns the same `gems` and backpack data.
 
-Nilai kembali
+Returns
 - `PlayerItems`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local p = GetPlayerItems()
 LogToConsole('Gems: ' .. p.gems)
 ```
 
-Terkait
+Related
 - [GetPlayerInfo](GetPlayerInfo.md)
 - [PlayerItems](../structures/PlayerItems.md)

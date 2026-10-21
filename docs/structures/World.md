@@ -1,20 +1,20 @@
 # World (name:string, width:int, height:int)
 
-Informasi dunia yang sedang dimuat. Lebar x tinggi adalah ukuran world dalam tile. Nilai ini berubah saat Anda berpindah world.
+The world currently loaded. Width and height are in tiles and change when you move worlds.
 
-Bidang
-- `name: string`: Nama world.
-- `width: int`: Lebar (jumlah tile X).
-- `height: int`: Tinggi (jumlah tile Y).
-- `tilecount: int`: Total tile.
-- `objectcount: int`: Total world object aktif.
-- `lastoid: int`: OID terakhir.
+Fields
+- `name: string`: world name.
+- `width: int`: width in tiles.
+- `height: int`: height in tiles.
+- `tilecount: int`: total tiles.
+- `objectcount: int`: active world objects.
+- `lastoid: int`: last object id handed out.
 
-Contoh penggunaan (Lua)
+Example (Lua)
 ```lua
 local w = GetWorld()
-LogToConsole(('World %s (%dx%d)'):format(w.name, w.width, w.height))
+LogToConsole(('world %s (%dx%d)'):format(w.name, w.width, w.height))
 ```
 
-Terkait
+Related
 - [GetWorld](../functions/GetWorld.md)

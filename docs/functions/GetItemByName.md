@@ -1,18 +1,19 @@
 # GetItemByName(name: string) -> ItemInfo
 
-Mengambil data item berdasarkan nama. Nama pencarian sensitif pada ejaan. Jika ingin pencarian bebas sebagian, gunakan `GetItemsByPartialName`.
+Looks an item up by exact name. Matching is case sensitive, so use
+`GetItemsByPartialName` when you only know part of the name.
 
-Parameter
-- `name: string`: Nama item.
+Parameters
+- `name: string`: item name.
 
-Nilai kembali
+Returns
 - `ItemInfo`
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 LogToConsole(GetItemByName('Dirt').id)
 ```
 
-Terkait
+Related
 - [ItemInfo](../structures/ItemInfo.md)
-- [GetItemInfo](GetItemInfo.md)
+- [GetItemsByPartialName](GetItemsByPartialName.md)

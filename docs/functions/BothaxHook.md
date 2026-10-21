@@ -1,26 +1,32 @@
-# BothaxHook (Event)
+# BothaxHook (event names)
 
-Kumpulan nama event yang bisa di-hook dengan `AddHook` untuk menangkap/periksa/override perilaku. Pakai bersama `AddHook` untuk memasang listener. Kembalikan `true` dari callback bila ingin memblokir event tertentu.
+The event names `AddHook` accepts. Use them to observe game behaviour, and return `true`
+from the callback when you want to block the event.
 
-Daftar event & parameter callback
-- `OnVariant(var, netid, delay)`: Varian event teks/game (misal OnDialogRequest).
-- `OnSendPacket(type, packet)`: Packet teks sebelum terkirim.
-- `OnSendPacketRaw(packet)`: `GameUpdatePacket` sebelum terkirim.
-- `OnProcessTankUpdate(packet)`: Paket update diproses klien.
-- `OnWorldTouch(pos, start)`: Sentuhan/tap pada world (pos pixel), `start: boolean`.
-- `OnDraw(deltatime)`: Frame render; gunakan untuk UI (ImGui).
-- `OnInput(key)`: Windows-only; key code ditekan.
+Events and callback parameters
+- `OnVariant(var, netid, delay)`: text or game variant, for example `OnDialogRequest`.
+- `OnSendPacket(type, packet)`: text packet before it is sent.
+- `OnSendPacketRaw(packet)`: `GameUpdatePacket` before it is sent.
+- `OnProcessTankUpdate(packet)`: update packet processed by the client.
+- `OnWorldTouch(pos, start)`: world touch or tap, `pos` in pixels.
+- `OnDraw(deltatime)`: render frame, used for ImGui overlays.
+- `OnInput(key)`: Windows only, a key was pressed.
 
-Contoh penggunaan (Lua)
+Notes
+- Only numeric labels produced events in our tests; see [AddHook](AddHook.md).
+- Blocking `OnProcessTankUpdate` hides state the client needs, so prefer reading packets
+  and acting elsewhere.
+
+Example (Lua)
 ```lua
-AddHook('OnVariant', 'block_dialog', function(var)
+AddHook('OnVariant', 7, function(var)
   if var[0] == 'OnDialogRequest' then
-    LogToConsole('Dialog diblokir')
-    return true -- kembalikan true untuk memblokir
+    LogToConsole('dialog blocked')
+    return true
   end
 end)
 ```
 
-Terkait
+Related
 - [AddHook](AddHook.md)
 - [RemoveHook](RemoveHook.md) / [RemoveHooks](RemoveHooks.md)

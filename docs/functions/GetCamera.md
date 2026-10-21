@@ -1,18 +1,19 @@
 # GetCamera() -> WorldCamera
 
-Mengambil informasi kamera world. Bantu perhitungan posisi layar untuk menggambar overlay, teks, atau indikator arah.
+Returns the world camera. Use it to convert between world pixels and screen space when you
+draw overlays, labels, or direction markers.
 
-Nilai kembali
-- `WorldCamera`: Posisi, center, scale, dan resolusi.
+Returns
+- `WorldCamera`: position, centre, scale, and resolution.
 
-Contoh (Lua)
+Example (Lua)
 ```lua
 local cam = GetCamera()
-LogToConsole("Camera Position: " .. cam.pos.x .. ", " .. cam.pos.y)
-LogToConsole("Camera Center: " .. cam.center.x .. ", " .. cam.center.y)
-LogToConsole("Camera Scale: " .. cam.scale)
+LogToConsole("Camera position: " .. cam.pos.x .. ", " .. cam.pos.y)
+LogToConsole("Camera centre: " .. cam.center.x .. ", " .. cam.center.y)
+LogToConsole("Camera scale: " .. cam.scale)
 LogToConsole("Resolution: " .. cam.resolution.x .. "x" .. cam.resolution.y)
 ```
 
-Terkait
+Related
 - [WorldCamera](../structures/WorldCamera.md)
