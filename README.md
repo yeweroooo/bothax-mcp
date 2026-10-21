@@ -206,6 +206,18 @@ game.
     experiments/        probe scripts, each file states its result
     docs/               Bothax API reference and client notes
 
+## Contributing
+
+Pull requests are welcome: new tools, bridge fixes, and experiment scripts that document
+what the game API does. Read [CONTRIBUTING.md](CONTRIBUTING.md) first; the short version:
+
+- branch from `main`, one topic per PR;
+- run the tests, and if you touched a tool, run it on a device and paste the output;
+- AI-written code is allowed, but you must have run it and understand every line;
+- the PR template asks for the evidence before review starts.
+
+Nothing is pushed straight to `main`.
+
 ## Limits
 
 - **The executor is required.** If the BINTERNAL menu is still locked, `bridge.lua` cannot

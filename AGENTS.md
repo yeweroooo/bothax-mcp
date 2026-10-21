@@ -100,3 +100,7 @@ client but hides your own changes; restart the owner when you are testing server
 Short imperative subject, then the reason. Mention what was verified. Do not commit
 `.venv`, logs, pid files, or scratch scripts; probes belong in `experiments/` with a
 header stating what they proved.
+
+External contributions arrive through pull requests. Their bar is `CONTRIBUTING.md`: tests
+run, live evidence pasted, English comments, no renamed JSON keys. Review the diff against
+these points before merging.
